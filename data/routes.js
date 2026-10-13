@@ -3,6 +3,9 @@
 window.PNW_ROUTES = [
   {
     id: "gales-creek",
+    quip: "Close enough to Portland to ride before brunch, far enough to forget your inbox.",
+    badge: "Log-Truck Dodger",
+    stop: "Forest Grove taprooms",
     name: "Gales Creek to Reehers Loop",
     area: "Tillamook State Forest",
     region: "Coast Range",
@@ -21,6 +24,9 @@ window.PNW_ROUTES = [
   },
   {
     id: "marys-peak",
+    quip: "The Coast Range's tallest bump. Earn the view, then descend grinning.",
+    badge: "Peak Bagger",
+    stop: "Philomath coffee and pie",
     name: "Mary's Peak Backside",
     area: "Siuslaw National Forest",
     region: "Coast Range",
@@ -39,6 +45,9 @@ window.PNW_ROUTES = [
   },
   {
     id: "lolo-pass",
+    quip: "Mt. Hood photobombs every single switchback.",
+    badge: "Volcano Chaser",
+    stop: "Burgers in Rhododendron",
     name: "Lolo Pass & Old Maid Flat",
     area: "Mt. Hood National Forest",
     region: "Cascades",
@@ -57,6 +66,9 @@ window.PNW_ROUTES = [
   },
   {
     id: "westfir",
+    quip: "Big ridges, bigger snacks. The Oakridge pint tastes earned.",
+    badge: "Ridge Runner",
+    stop: "Oakridge brewpub",
     name: "Westfir Ridges",
     area: "Willamette National Forest",
     region: "Cascades",
@@ -75,6 +87,9 @@ window.PNW_ROUTES = [
   },
   {
     id: "big-summit",
+    quip: "A meadow so big it makes its own weather. Wildflowers in June, cows always.",
+    badge: "Cow Whisperer",
+    stop: "Prineville diner pie",
     name: "Big Summit Prairie",
     area: "Ochoco National Forest",
     region: "Central Oregon",
@@ -93,6 +108,9 @@ window.PNW_ROUTES = [
   },
   {
     id: "fort-rock",
+    quip: "Sand, sky, and an ancient volcanic doughnut the size of a town.",
+    badge: "Desert Rat",
+    stop: "Fort Rock store ice cream",
     name: "Fort Rock & Christmas Valley",
     area: "Oregon Outback (sampler)",
     region: "High Desert",
@@ -111,6 +129,9 @@ window.PNW_ROUTES = [
   },
   {
     id: "klickitat",
+    quip: "A rail grade so gentle you can eat a sandwich on the climb.",
+    badge: "Canyon Cruiser",
+    stop: "Tacos in Lyle",
     name: "Klickitat Trail: Lyle to Harms Road",
     area: "Klickitat Trail",
     region: "Columbia Gorge",
@@ -129,6 +150,9 @@ window.PNW_ROUTES = [
   },
   {
     id: "iron-horse",
+    quip: "Ride 2.3 miles through a mountain in the dark. Yell. It echoes.",
+    badge: "Tunnel Rat",
+    stop: "North Bend bakery",
     name: "Iron Horse to the Snoqualmie Tunnel",
     area: "Palouse to Cascades State Park Trail",
     region: "Snoqualmie Pass",
@@ -147,6 +171,9 @@ window.PNW_ROUTES = [
   },
   {
     id: "capitol-forest",
+    quip: "A bowl of DNR-road spaghetti. Getting lost is a feature.",
+    badge: "Spaghetti Wrangler",
+    stop: "Olympia taprooms",
     name: "Capitol Forest Ridge Loop",
     area: "Capitol State Forest",
     region: "South Sound",
@@ -165,6 +192,9 @@ window.PNW_ROUTES = [
   },
   {
     id: "methow",
+    quip: "Two towns, two bakeries, zero regrets.",
+    badge: "Bakery Hopper",
+    stop: "Cinnamon rolls in Winthrop",
     name: "Methow Valley Benchlands",
     area: "Okanogan-Wenatchee NF",
     region: "North Cascades",
@@ -183,6 +213,9 @@ window.PNW_ROUTES = [
   },
   {
     id: "steptoe",
+    quip: "Rolling wheat that moves like a gold-and-green ocean.",
+    badge: "Wheat Surfer",
+    stop: "Colfax milkshakes",
     name: "Palouse Steptoe Rollers",
     area: "Palouse farm roads",
     region: "Palouse",
@@ -201,6 +234,9 @@ window.PNW_ROUTES = [
   },
   {
     id: "windy-ridge",
+    quip: "Ride into a volcano's living room. It's still redecorating.",
+    badge: "Blast Zone Survivor",
+    stop: "Randle diner",
     name: "St. Helens East Side",
     area: "Gifford Pinchot National Forest",
     region: "South Cascades",

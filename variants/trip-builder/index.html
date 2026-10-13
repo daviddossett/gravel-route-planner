@@ -36,6 +36,13 @@
   .brand svg { width: 26px; height: 26px; }
   .trip-name { font: 600 22px/1 var(--head); background: transparent; border: 0; border-bottom: 1px dashed var(--line); color: var(--tx); padding: 4px 2px; min-width: 0; width: 28ch; }
   .trip-name:hover { border-bottom-color: var(--tx2); }
+  .name-wrap { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .dice { width: 34px; height: 34px; flex: none; border-radius: 8px; border: 1px solid var(--line); background: var(--s1); cursor: pointer; display: grid; place-items: center; transition: border-color .15s, background .15s; }
+  .dice:hover { border-color: var(--amber); background: var(--s2); }
+  .dice svg { width: 20px; height: 20px; }
+  .dice.roll svg { animation: roll .6s cubic-bezier(.2, .9, .3, 1.2); }
+  @keyframes roll { from { transform: rotate(-200deg) scale(.6); } to { transform: none; } }
+  .grit { position: fixed; z-index: 30; border-radius: 2px; pointer-events: none; }
   .ctl { display: flex; align-items: center; gap: 8px; color: var(--tx2); font-size: 13px; }
   .ctl input[type=date] { font: 500 15px var(--body); background: var(--s1); color: var(--tx); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
@@ -117,8 +124,21 @@
   .fine { font-size: 13px; color: var(--tx2); margin-top: 28px; line-height: 1.5; }
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 12px); background: var(--tx); color: var(--bg); font-weight: 600; font-size: 15px; padding: 10px 16px; border-radius: 8px; opacity: 0; transition: opacity .2s, transform .3s cubic-bezier(.16, 1, .3, 1); pointer-events: none; z-index: 20; box-shadow: 0 8px 24px -6px rgba(0, 0, 0, .5); }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
-  .day.enter { animation: drop .5s cubic-bezier(.16, 1, .3, 1); }
-  @keyframes drop { from { transform: translateY(-6px); border-color: var(--amber); background: var(--s2); } to { transform: none; } }
+  .day.enter { animation: drop .65s cubic-bezier(.16, 1, .3, 1); }
+  @keyframes drop { 0% { transform: translateY(-22px) rotate(-1deg); opacity: 0; border-color: var(--amber); } 55% { transform: translateY(4px) rotate(.3deg); opacity: 1; border-color: var(--amber); } 100% { transform: none; } }
+  .leg .aside { color: #87918a; font-style: italic; }
+  .badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 14px 6px; margin: 0 0 26px; padding: 0; list-style: none; }
+  .badges li { display: grid; justify-items: center; gap: 6px; text-align: center; font-size: 13px; line-height: 1.2; }
+  .badges svg { width: 58px; height: 58px; }
+  .badges .lock { opacity: .4; }
+  .badges .lock span { color: var(--tx2); }
+  .badges .pop svg { animation: pop .7s cubic-bezier(.3, 1.6, .5, 1); }
+  @keyframes pop { 0% { transform: scale(0) rotate(-40deg); } 100% { transform: none; } }
+  .badge-count { font: 500 13px var(--body); color: var(--tx2); text-transform: none; letter-spacing: 0; margin-left: 6px; }
+  .progress { height: 6px; border-radius: 3px; background: var(--s2); overflow: hidden; margin: -4px 0 12px; }
+  .progress i { display: block; height: 100%; background: var(--amber); border-radius: 3px; transition: width .4s cubic-bezier(.16, 1, .3, 1); }
+  .packed-msg { font-size: 13px; color: var(--tx2); margin: 0 0 10px; }
+  .packed-msg.done { color: var(--amber); font-weight: 600; }
 
   @media (max-width: 1180px) {
     .layout { grid-template-columns: 300px minmax(0, 1fr); }
@@ -142,7 +162,10 @@
     <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="8" cy="21" r="6" fill="none" stroke="#f2b42c" stroke-width="2.4"/><circle cx="24" cy="21" r="6" fill="none" stroke="#f2b42c" stroke-width="2.4"/><path d="M8 21l5-9h8l3 9M13 12l-1.5-3H9M21 12l1-3h3" fill="none" stroke="#e9ede7" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>
     Trip Builder
   </div>
-  <input class="trip-name" id="name" aria-label="Trip name" maxlength="48">
+  <div class="name-wrap">
+    <input class="trip-name" id="name" aria-label="Trip name" maxlength="48">
+    <button class="dice" id="dice" type="button" aria-label="Roll a random trip name" title="Roll a random trip name"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="3.5" fill="#f2b42c"/><g fill="#1b1505"><circle cx="6.5" cy="6.5" r="1.4"/><circle cx="13.5" cy="6.5" r="1.4"/><circle cx="10" cy="10" r="1.4"/><circle cx="6.5" cy="13.5" r="1.4"/><circle cx="13.5" cy="13.5" r="1.4"/></g></svg></button>
+  </div>
   <label class="ctl">Leaving <input type="date" id="date"></label>
   <div class="ctl"><span id="home-l">Home</span>
     <div class="seg" role="group" aria-labelledby="home-l" id="home">
@@ -176,11 +199,17 @@
       <table class="ledger" id="ledger"></table>
     </div>
     <div>
-      <h2>Readiness</h2>
+      <h2>Merit badges<span class="badge-count" id="bcount"></span></h2>
+      <ul class="badges" id="badges"></ul>
+    </div>
+    <div>
+      <h2>Vibe check</h2>
       <ul class="checks" id="checks"></ul>
     </div>
     <div>
       <h2>Pack list</h2>
+      <p class="packed-msg" id="packed-msg"></p>
+      <div class="progress" aria-hidden="true"><i id="packbar" style="width:0"></i></div>
       <ul class="pack" id="pack"></ul>
     </div>
   </aside>
@@ -197,6 +226,26 @@
   const MAX_DAYS = 5;
   const KEY = "pnw-trip-builder-v1";
   const HOME = { pdx: "Portland", sea: "Seattle" };
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const ASIDES = ["windows down", "queue a podcast", "gas-station snack run", "argue about tire pressure", "sing badly", "spot the elk", "coffee mandatory"];
+  const NAMES = ["The Dusty Loop-de-Loop", "Operation Forest Road", "Washboard Wanderings", "Big Tires, Bigger Snacks", "The Cattle Guard Classic", "Tour de Dust", "Pie & Pumice Expedition", "Quads & Quesadillas", "The Great Gravel Getaway", "Type 2 Fun Weekend", "Ridges, Rollers & Rolls", "Forest Service Road Trip"];
+  function spray(x, y, n = 20) {
+    if (reduce) return;
+    const colors = ["#f2b42c", "#c9b48a", "#8a8f86", "#e9ede7", "#a07b3c"];
+    for (let i = 0; i < n; i++) {
+      const g = document.createElement("i"), sz = 3 + Math.random() * 4;
+      g.className = "grit";
+      Object.assign(g.style, { left: x + "px", top: y + "px", width: sz + "px", height: sz + "px", background: colors[i % colors.length] });
+      document.body.append(g);
+      const a = (-160 + Math.random() * 140) * Math.PI / 180, v = 40 + Math.random() * 70;
+      const dx = Math.cos(a) * v, dy = Math.sin(a) * v;
+      g.animate([
+        { transform: "translate(-50%, -50%)", opacity: 1 },
+        { transform: `translate(${dx}px, ${dy}px) rotate(${Math.random() * 360}deg)`, opacity: 1, offset: .5 },
+        { transform: `translate(${dx * 1.4}px, ${dy + 70}px) rotate(${Math.random() * 720}deg)`, opacity: 0 },
+      ], { duration: 650 + Math.random() * 350, easing: "cubic-bezier(.25, .8, .5, 1)" }).onfinish = () => g.remove();
+    }
+  }
   const HOT = new Set(["big-summit", "fort-rock", "klickitat", "steptoe"]);
 
   const nextSat = () => { const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); return d.toISOString().slice(0, 10); };
@@ -257,14 +306,17 @@
   }
   $("#lib").addEventListener("click", (e) => {
     const b = e.target.closest("[data-add]"); if (!b || b.disabled) return;
+    const rc = b.getBoundingClientRect();
     S.days.push(b.dataset.add); save(); render(S.days.length - 1);
+    spray(rc.left + rc.width / 2, rc.top + rc.height / 2);
+    toast(`Day ${S.days.length}: ${byId[b.dataset.add].name}. Let's go.`);
   });
 
   // Itinerary
   function renderItin(enterIdx) {
     const el = $("#itin");
     if (!S.days.length) {
-      el.innerHTML = `<div class="empty"><h3>No rides yet</h3><p>Add a route from the library to make it Day 1. Each ride you add becomes the next day, with the drive between trailheads worked out for you.</p></div>`;
+      el.innerHTML = `<div class="empty"><h3>Blank map, full tank</h3><p>Add a route from the library to make it Day 1. Every ride becomes the next day, and we'll do the math on drives, snacks, and bragging rights.</p></div>`;
       return;
     }
     const homeName = HOME[S.home];
@@ -273,7 +325,7 @@
       const r = byId[id];
       const prev = i ? byId[S.days[i - 1]] : null;
       const drive = prev ? driveBetween(prev, r) : r.drive[S.home];
-      html += `<div class="leg">${icon.car}<span><span class="num">${h1(drive)} h</span> drive from ${prev ? prev.start : homeName} to ${r.start}</span></div>`;
+      html += `<div class="leg">${icon.car}<span><span class="num">${h1(drive)} h</span> drive from ${prev ? prev.start : homeName} to ${r.start} <span class="aside">· ${ASIDES[(i + S.days.length) % ASIDES.length]}</span></span></div>`;
       const off = !r.months.includes(monthOf(i));
       html += `<article class="day ${off ? "warn" : ""} ${i === enterIdx ? "enter" : ""}" aria-label="Day ${i + 1}: ${r.name}">
         <div class="day-h"><span class="d">Day ${i + 1}</span><span class="dt">${dateLabel(i)}</span></div>
@@ -295,7 +347,7 @@
       </article>`;
     });
     const last = byId[S.days[S.days.length - 1]];
-    html += `<div class="leg">${icon.car}<span><span class="num">${h1(last.drive[S.home])} h</span> drive home to ${homeName}</span></div>`;
+    html += `<div class="leg">${icon.car}<span><span class="num">${h1(last.drive[S.home])} h</span> drive home to ${homeName} <span class="aside">· tired, happy, dusty</span></span></div>`;
     el.innerHTML = html;
   }
   $("#itin").addEventListener("click", (e) => {
@@ -331,23 +383,51 @@
       <tr><th scope="row">Distance</th><td>${fmt(p.miles)} mi</td></tr>
       <tr><th scope="row">Climbing</th><td>${fmt(p.gain)} ft</td></tr>
       <tr><th scope="row">Driving</th><td>${hm(p.drive)}</td></tr>
+      <tr><th scope="row">Fuel</th><td>≈ ${Math.max(0, Math.round(p.saddle * 250 / 900))} burritos</td></tr>
       <tr class="total"><th scope="row">Saddle time</th><td>${hm(p.saddle)}</td></tr>`;
 
     const checks = [];
-    if (!p.rs.length) checks.push(["warn", "Add at least one ride to check readiness."]);
+    if (!p.rs.length) checks.push(["warn", "Add a ride and we'll check the vibes."]);
     const off = p.rs.map((r, i) => [r, i]).filter(([r, i]) => !r.months.includes(monthOf(i)));
     off.length ? off.forEach(([r, i]) => checks.push(["bad", `Day ${i + 1}: ${r.name} is out of season on ${dateLabel(i)}.`]))
-      : p.rs.length && checks.push(["ok", "Every ride is in season for your dates."]);
+      : p.rs.length && checks.push(["ok", "Every ride is in season. The gravel gods approve."]);
     const big = p.rs.map((r, i) => [r, i]).filter(([r]) => saddle(r) > 5.5);
-    big.forEach(([r, i]) => checks.push(["warn", `Day ${i + 1} is a long one — about ${hm(saddle(r))} on the bike. Start early.`]));
+    big.forEach(([r, i]) => checks.push(["warn", `Day ${i + 1} is a big one: about ${hm(saddle(r))} in the saddle. Alarm at dawn, snacks in every pocket.`]));
     const longDrive = p.legs.map((h, i) => [h, i]).filter(([h]) => h > 3.5);
-    longDrive.forEach(([h, i]) => checks.push(["warn", i < p.rs.length ? `${h} h drive before Day ${i + 1}. Consider driving the night before.` : `${h} h drive home after the last ride.`]));
+    longDrive.forEach(([h, i]) => checks.push(["warn", i < p.rs.length ? `${h} h drive before Day ${i + 1}. Queue a podcast, or drive the night before.` : `${h} h drive home after the last ride.`]));
     const dry = p.rs.filter((r) => r.water === "none");
-    if (dry.length) checks.push(["warn", `No water on ${dry.map((r) => r.name).join(", ")}. Carry it all.`]);
-    if (p.rs.length && !big.length && !longDrive.length && !dry.length && !off.length) checks.push(["ok", "Reasonable days and drives. Nice plan."]);
+    if (dry.length) checks.push(["warn", `No water on ${dry.map((r) => r.name).join(", ")}. Carry it all, camel-style.`]);
+    if (p.rs.length && !big.length && !longDrive.length && !dry.length && !off.length) checks.push(["ok", "Sane days, sane drives. Suspiciously reasonable plan."]);
     $("#checks").innerHTML = checks.map(([k, t]) => `<li>${icon[k]}<span>${t}</span></li>`).join("");
 
+    renderBadges(p);
     renderPack(p);
+  }
+
+  let earned = null;
+  function patch(text, trip, on) {
+    const fill = trip ? "#f2b42c" : "#232b27", ink = trip ? "#1b1505" : "#f2b42c";
+    return `<svg viewBox="0 0 60 60" aria-hidden="true"><path d="M30 3l23.4 13.5v27L30 57 6.6 43.5v-27z" fill="${on ? fill : "#1f2622"}" stroke="${on ? ink : "#4a554f"}" stroke-width="1.5"/><path d="M30 8.5l18.6 10.7v21.6L30 51.5 11.4 40.8V19.2z" fill="none" stroke="${on ? ink : "#4a554f"}" stroke-width="1.2" stroke-dasharray="2.5 2.5"/><text x="30" y="36" text-anchor="middle" font-family="Barlow Condensed, sans-serif" font-weight="700" font-size="17" fill="${on ? ink : "#6d7871"}">${text}</text></svg>`;
+  }
+  function renderBadges(p) {
+    const initials = (n) => n.split(/[\s-]+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase();
+    const states = new Set(p.rs.map((r) => r.state));
+    const trip = [
+      ["century", "Century Club", "100+ miles", p.miles >= 100, "100"],
+      ["vert", "Vert Vacuum", "10,000+ ft", p.gain >= 10000, "10K"],
+      ["border", "State Liner", "Ride OR and WA", states.size > 1, "OR+WA"],
+      ["iron", "Iron Legs", "4+ days", p.rs.length >= 4, "4D"],
+      ["road", "Road Warrior", "8h+ driving", p.drive >= 8, "8H"],
+    ];
+    const items = [
+      ...p.rs.map((r) => ({ id: "r-" + r.id, name: r.badge, html: patch(initials(r.badge), false, true), on: true, hint: r.name })),
+      ...trip.map(([id, name, hint, on, glyph]) => ({ id: "t-" + id, name, html: patch(on ? glyph : "?", true, on), on, hint })),
+    ];
+    const now = new Set(items.filter((i) => i.on).map((i) => i.id));
+    const got = trip.filter((t) => t[3]).length;
+    $("#bcount").textContent = `${now.size} earned`;
+    $("#badges").innerHTML = items.map((i) => `<li class="${i.on ? "" : "lock"} ${earned && i.on && !earned.has(i.id) ? "pop" : ""}" title="${i.on ? "Earned" : "Locked"}: ${i.name} (${i.hint})"><span class="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">${i.on ? "Earned" : "Locked"}:</span>${i.html}<span>${i.on ? i.name : i.hint}</span></li>`).join("");
+    earned = now;
   }
 
   function renderPack(p) {
@@ -371,17 +451,30 @@
       add("food", `${Math.ceil(p.saddle * 250 / 100) * 100} kcal of ride food`, "About 250 kcal per hour of riding");
     }
     const packed = new Set(S.packed);
+    const done = items.filter((it) => packed.has(it.id)).length;
+    const msg = $("#packed-msg"), all = items.length && done === items.length;
+    msg.textContent = !items.length ? "" : all ? "Fully packed. Nothing left but the riding." : `${done} of ${items.length} packed`;
+    msg.classList.toggle("done", !!all);
+    $("#packbar").style.width = items.length ? `${done / items.length * 100}%` : "0";
     $("#pack").innerHTML = items.length ? items.map((it) => `<li><label><input type="checkbox" data-pk="${it.id}" ${packed.has(it.id) ? "checked" : ""}><span>${it.label}<span class="why">${it.why}</span></span></label></li>`).join("")
       : `<li style="color:var(--tx2);font-size:14px">Your pack list builds itself from the rides you add.</li>`;
   }
   $("#pack").addEventListener("change", (e) => {
     const id = e.target.dataset.pk; if (!id) return;
     const s = new Set(S.packed); e.target.checked ? s.add(id) : s.delete(id); S.packed = [...s]; save();
+    renderPack(plan());
+    const again = document.querySelector(`[data-pk="${id}"]`); if (again) again.focus();
+    if (document.querySelector("#packed-msg.done") && e.target.checked) { const r = $("#packbar").parentElement.getBoundingClientRect(); spray(r.right - 10, r.top, 30); }
   });
 
   // Header controls
   $("#name").value = S.name; $("#date").value = S.date;
   $("#name").addEventListener("input", (e) => { S.name = e.target.value; save(); });
+  $("#dice").addEventListener("click", () => {
+    const d = $("#dice"); d.classList.remove("roll"); void d.offsetWidth; d.classList.add("roll");
+    const pool = NAMES.filter((n) => n !== S.name);
+    S.name = pool[Math.floor(Math.random() * pool.length)]; $("#name").value = S.name; save();
+  });
   $("#date").addEventListener("change", (e) => { if (e.target.value) { S.date = e.target.value; save(); render(); } });
   $("#home").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.home = b.dataset.v; save(); render(); });
   $("#clear").addEventListener("click", () => {
@@ -397,7 +490,7 @@
     p.rs.forEach((r, i) => lines.push(`Day ${i + 1} (${dateLabel(i)}): ${r.name} — ${r.miles} mi, ${fmt(r.gain)} ft, ~${hm(saddle(r))}. Start: ${r.start}. Drive in: ${p.legs[i]} h.`));
     lines.push(`Drive home: ${p.legs[p.legs.length - 1]} h`, "", `Totals: ${p.miles} mi · ${fmt(p.gain)} ft · ${hm(p.saddle)} riding · ${hm(p.drive)} driving`, "(Sample data — verify conditions before you go.)");
     const t = lines.join("\n");
-    navigator.clipboard ? navigator.clipboard.writeText(t).then(() => toast("Plan copied to clipboard"), () => toast("Couldn't access the clipboard")) : toast("Clipboard isn't available here");
+    navigator.clipboard ? navigator.clipboard.writeText(t).then(() => toast("Plan copied. Send it to the group chat."), () => toast("Couldn't access the clipboard")) : toast("Clipboard isn't available here");
   });
 
   let tt;

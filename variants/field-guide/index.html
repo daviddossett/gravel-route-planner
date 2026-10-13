@@ -17,6 +17,8 @@
     --moss: #3f6233;
     --ochre: #a86a12;
     --wash: #f1ead9;
+    --stamp: #b23a1c;
+    --sky: #f4dcc2; --sun: #e2672a; --far: #c79a7a; --mid: #a8572b; --near: #4b5a2c; --snow: #fff6ea; --road: #dcc39e; --accent: #b8521f;
     --serif: "Newsreader", Georgia, "Times New Roman", serif;
     --sans: "Archivo", "Helvetica Neue", Arial, sans-serif;
   }
@@ -25,7 +27,17 @@
   a { color: inherit; }
   .wrap { max-width: 1180px; margin: 0 auto; padding: 0 40px; }
 
-  header.mast { padding: 56px 0 28px; border-bottom: 2px solid var(--ink); }
+  body[data-season="winter"] { --sky: #dde6ec; --sun: #f6f3e8; --far: #a3b3bf; --mid: #73899a; --near: #3e5563; --snow: #fff; --road: #cfc8bb; --accent: #3f6a86; }
+  body[data-season="spring"] { --sky: #e5eed4; --sun: #f5cf5c; --far: #a9bfa0; --mid: #6f9a5a; --near: #3f6233; --snow: #fff; --road: #d8c7a0; --accent: #4d7d33; }
+  body[data-season="summer"] { --sky: #f6e6b8; --sun: #ef9d1e; --far: #c9b98c; --mid: #9a9a52; --near: #56632f; --snow: #fbf3dc; --road: #e3cf9c; --accent: #b06d0c; }
+  header.mast { padding: 56px 0 0; border-bottom: 2px solid var(--ink); }
+  .ill { display: block; width: 100%; height: clamp(130px, 14.17vw, 240px); margin-top: 28px; }
+  .ill .sky { fill: var(--sky); } .ill .sun { fill: var(--sun); } .ill .far { fill: var(--far); } .ill .mid { fill: var(--mid); }
+  .ill .near, .ill .tree { fill: var(--near); } .ill .snow { fill: var(--snow); } .ill .road { stroke: var(--road); }
+  .ill * { transition: fill .9s ease, stroke .9s ease; }
+  .ill .sun { transform-box: fill-box; transform-origin: center; animation: glow 6s ease-in-out infinite alternate; }
+  @keyframes glow { to { transform: scale(1.08); } }
+  .season-line { color: var(--accent); font-style: italic; font-family: var(--serif); font-size: 17px; transition: color .9s; }
   .mast-grid { display: grid; grid-template-columns: 1fr minmax(260px, 340px); gap: 40px; align-items: end; }
   .mast h1 { font-size: clamp(44px, 7vw, 92px); line-height: .92; letter-spacing: -0.03em; font-weight: 600; margin: 0; font-variation-settings: "opsz" 72; text-wrap: balance; }
   .mast h1 em { font-weight: 400; color: var(--moss); }
@@ -41,7 +53,7 @@
   .months button .n { display: block; font: 500 11px var(--sans); color: var(--ink-2); margin-top: 5px; letter-spacing: 0; text-transform: none; }
   .months button:hover { color: var(--ink); }
   .months button[aria-pressed="true"] { color: var(--ink); }
-  .months button[aria-pressed="true"]::after { content: ""; position: absolute; left: 12%; right: 12%; bottom: -1px; height: 3px; background: var(--ochre); }
+  .months button[aria-pressed="true"]::after { content: ""; position: absolute; left: 12%; right: 12%; bottom: -1px; height: 3px; background: var(--accent); transition: background .9s; }
   .months button:focus-visible, .tool button:focus-visible, .star:focus-visible, select:focus-visible { outline: 2px solid var(--ochre); outline-offset: 2px; }
 
   .tools { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; padding: 18px 0; border-bottom: 1px solid var(--rule); font-family: var(--sans); font-size: 14px; }
@@ -59,6 +71,19 @@
   .muted .entry { opacity: .62; }
   .muted .entry:hover, .muted .entry:focus-within { opacity: 1; }
 
+  .quip { margin: 14px 0 0; font-size: 22px; line-height: 1.3; font-style: italic; letter-spacing: -0.005em; max-width: 30ch; text-wrap: balance; }
+  .reward { margin: 10px 0 0; font-family: var(--sans); font-size: 14px; color: var(--ink-2); display: flex; gap: 8px; align-items: center; }
+  .reward svg { width: 16px; height: 16px; flex: none; color: var(--ochre); }
+  .reward b { color: var(--ink); font-weight: 600; }
+  .stamp { display: inline-flex; align-items: center; gap: 6px; font: 800 12px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--stamp); border: 2px solid var(--stamp); padding: 6px 10px; border-radius: 4px; transform: rotate(-7deg); box-shadow: inset 0 0 0 2px var(--paper), inset 0 0 0 3.5px var(--stamp); mix-blend-mode: multiply; }
+  .stamp.fresh { animation: thunk .42s cubic-bezier(.55, 0, .75, .3) both; }
+  @keyframes thunk { 0% { transform: rotate(-20deg) scale(2.6); opacity: 0; } 75% { transform: rotate(-7deg) scale(.93); opacity: 1; } 100% { transform: rotate(-7deg) scale(1); } }
+  .prof-wrap { position: relative; cursor: crosshair; touch-action: pan-y; }
+  .rider { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; opacity: 0; transition: opacity .2s; }
+  .rider.on { opacity: 1; }
+  .rider svg { display: block; width: 28px; height: 26px; margin: -26px 0 0 -14px; transform-origin: 14px 26px; }
+  .rider .alt { position: absolute; bottom: 30px; left: 0; transform: translateX(-50%); white-space: nowrap; font: 600 11px/1 var(--sans); background: var(--ink); color: var(--paper); padding: 4px 7px; border-radius: 3px; font-variant-numeric: tabular-nums; }
+  .hint { font-family: var(--sans); font-size: 12px; color: var(--ink-2); font-style: normal; }
   .entry { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) 250px; gap: 12px 40px; padding: 30px 0 32px; border-bottom: 1px solid var(--rule); transition: opacity .2s; }
   .entry-head h3 { margin: 0; font-size: 30px; line-height: 1.08; letter-spacing: -0.015em; font-weight: 600; text-wrap: balance; }
   .entry-head .where { font-family: var(--sans); font-size: 14px; color: var(--ink-2); margin-top: 8px; }
@@ -112,15 +137,33 @@
     .section-title { flex-direction: column; gap: 4px; }
     .section-title h2 { font-size: 28px; }
   }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
 <header class="mast">
   <div class="wrap mast-grid">
     <h1>The Gravel <em>Field Guide</em></h1>
-    <p class="dek">Twelve <strong>sample</strong> rides across Oregon and Washington, arranged by when they're actually good. Pick a month; we'll put the rides that are in season first.</p>
+    <p class="dek">Twelve <strong>sample</strong> rides across Oregon and Washington, sorted by when they're actually good, not when the internet says they are. Pick a month and watch the hills (and the list) change with it.</p>
   </div>
+  <svg class="ill" viewBox="0 0 1200 170" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <rect class="sky" width="1200" height="170"/>
+    <circle class="sun" cx="960" cy="70" r="26"/>
+    <path class="far" d="M0 120 L120 96 L220 108 L330 74 L420 100 L520 90 L560 92 L612 34 L628 34 L680 92 L800 82 L900 104 L1010 78 L1110 98 L1200 88 V170 H0Z"/>
+    <path class="snow" d="M594 55 L612 34 L628 34 L646 55 L636 51 L627 58 L619 49 L608 57 L601 52Z"/>
+    <path class="mid" d="M0 140 C120 112 220 118 320 128 C430 138 520 110 640 116 C760 124 860 104 980 112 C1080 118 1150 128 1200 124 V170 H0Z"/>
+    <g id="trees"></g>
+    <path class="near" d="M0 158 C160 140 300 152 460 148 C640 144 760 134 920 146 C1040 154 1120 148 1200 142 V170 H0Z"/>
+    <path id="road" class="road" d="M-40 168 C200 150 360 168 560 158 C760 148 900 168 1240 152" fill="none" stroke-width="3" stroke-dasharray="7 6" stroke-linecap="round"/>
+    <g id="cyclist" fill="none" stroke="#1f2a24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <g transform="translate(-14 -24)">
+        <circle cx="7" cy="18" r="5"/><circle cx="21" cy="18" r="5"/>
+        <path d="M7 18 L12 11 L19 11 L21 18 M12 11 L14 18 L19 11 M18 8 L19 11"/>
+        <path d="M14 18 L15 10 L18 4" stroke="#b8521f" stroke-width="2"/><circle cx="19" cy="1.5" r="2" fill="#1f2a24" stroke="none"/>
+      </g>
+      <animateMotion dur="40s" repeatCount="indefinite" rotate="auto"><mpath href="#road"/></animateMotion>
+    </g>
+  </svg>
 </header>
 
 <nav class="months" aria-label="Choose a month">
@@ -131,9 +174,9 @@
   <div class="tools" role="toolbar" aria-label="Refine the guide">
     <div class="tool" role="group" aria-label="Effort">
       <span>Effort</span>
-      <button data-effort="easy" aria-pressed="false">Easy</button>
-      <button data-effort="moderate" aria-pressed="false">Moderate</button>
-      <button data-effort="hard" aria-pressed="false">Hard</button>
+      <button data-effort="easy" aria-pressed="false">Cruisy</button>
+      <button data-effort="moderate" aria-pressed="false">Honest work</button>
+      <button data-effort="hard" aria-pressed="false">Type 2 fun</button>
     </div>
     <div class="tool" role="group" aria-label="State">
       <span>State</span>
@@ -150,7 +193,7 @@
       </select>
     </label>
     <div class="spacer"></div>
-    <div class="tool"><button id="shortlist" aria-pressed="false">Shortlist only (<span id="sl-count">0</span>)</button></div>
+    <div class="tool"><button id="shortlist" aria-pressed="false">Stamped only (<span id="sl-count">0</span>)</button></div>
   </div>
 
   <div id="results"></div>
@@ -172,7 +215,24 @@
 
   const state = { month: new Date().getMonth() + 1, effort: new Set(), st: null, sort: "pdx", shortOnly: false, short: new Set(store.get()) };
   const effortOf = (d) => d <= 2 ? "easy" : d === 3 ? "moderate" : "hard";
-  const effortName = { easy: "Easy", moderate: "Moderate", hard: "Hard" };
+  const effortName = { easy: "Cruisy", moderate: "Honest work", hard: "Type 2 fun" };
+  const SEASON = (m) => [12, 1, 2].includes(m) ? "winter" : m <= 5 ? "spring" : m <= 8 ? "summer" : "fall";
+  const SEASON_LINE = {
+    winter: "Chain-waxing season. A few low rail trails stay awake; everything else is snoozing under snow.",
+    spring: "Mud with wildflowers. Low roads and the dry side wake up first.",
+    summer: "High roads melt out. Start early, carry extra water, and earn that lake swim.",
+    fall: "Peak gravel. Crisp mornings, golden larches, and hunters in orange.",
+  };
+  let fresh = null;
+  const BIKE = '<svg viewBox="0 -6 28 26" fill="none" stroke="#1f2a24" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="14" r="5" fill="#fbf8f1"/><circle cx="21" cy="14" r="5" fill="#fbf8f1"/><path d="M7 14 L12 7 L19 7 L21 14 M12 7 L14 14 L19 7 M18 4 L19 7"/><path d="M14 14 L15 6 L18 0" stroke="#a86a12" stroke-width="2"/><circle cx="19" cy="-2.5" r="2" fill="#1f2a24" stroke="none"/></svg>';
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const trees = document.getElementById("trees");
+  for (let i = 0; i < 40; i++) {
+    const x = i * 31 + ((i * 53) % 19), h = 14 + ((i * 37) % 17), b = 152 - ((i * 7) % 9);
+    if (x > 570 && x < 700) continue;
+    trees.insertAdjacentHTML("beforeend", `<path class="tree" d="M${x} ${b} L${x + h * .32} ${b} L${x + h * .16} ${b - h}Z"/>`);
+  }
+  if (reduce) document.querySelector(".ill").pauseAnimations();
 
   // Months nav with count of in-season routes
   const mEl = $("#months");
@@ -220,7 +280,7 @@
     return `<svg class="prof" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Elevation profile, low point ${fmt(lo)} feet, high point ${fmt(hi)} feet">
       <defs><pattern id="${hatch}" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="#1f2a24" stroke-width=".8" stroke-opacity=".28"/></pattern></defs>
       <path d="${d} L${W},${H} L0,${H} Z" fill="url(#${hatch})"/>
-      <path d="${d}" fill="none" stroke="#1f2a24" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+      <path class="line" d="${d}" fill="none" stroke="#1f2a24" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
       <line x1="0" x2="${W}" y1="${H - .5}" y2="${H - .5}" stroke="#1f2a24" vector-effect="non-scaling-stroke"/>
     </svg>`;
   }
@@ -234,18 +294,21 @@
       <div class="entry-head">
         <h3>${r.name}</h3>
         <div class="where">${r.area} · ${r.region}, ${r.state} · starts in ${r.start}</div>
+        <p class="quip">“${r.quip}”</p>
         <p class="lede">${r.highlights.join(". ")}.</p>
         <p class="watch">Watch for: ${r.cautions.join("; ").toLowerCase()}.</p>
+        <p class="reward"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 5h8v4.5a4 4 0 01-8 0zM11 6h1.5a1.8 1.8 0 010 3.6H11M5 1.5c0 1 1 1 1 2M8 1.5c0 1 1 1 1 2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span>Post-ride reward: <b>${r.stop}</b></span></p>
         <div class="entry-actions">
           <button class="star" data-id="${r.id}" aria-pressed="${on}">
             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l1.9 4.1 4.5.5-3.4 3 1 4.4L8 11.3 4 13.5l1-4.4-3.4-3 4.5-.5z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-            ${on ? "On your shortlist" : "Add to shortlist"}
+            ${on ? "Stamped" : "Stamp it for later"}
           </button>
+          ${on ? `<span class="stamp ${fresh === r.id ? "fresh" : ""}" aria-hidden="true">On the list</span>` : ""}
         </div>
       </div>
       <div class="figure">
-        ${profile(r)}
-        <div class="cap"><span>${fmt(Math.min(...r.profile))} ft</span><span>high point ${fmt(Math.max(...r.profile))} ft</span><span>${r.miles} mi</span></div>
+        <div class="prof-wrap" data-miles="${r.miles}">${profile(r)}<div class="rider" aria-hidden="true">${BIKE}<span class="alt"></span></div></div>
+        <div class="cap"><span>${fmt(Math.min(...r.profile))} ft</span><span class="hint">hover to ride it</span><span>top ${fmt(Math.max(...r.profile))} ft · ${r.miles} mi</span></div>
         <div class="surface">
           <div class="bar" aria-hidden="true"><span class="g" style="width:${r.gravel}%"></span><span class="p" style="width:${100 - r.gravel}%"></span></div>
           <div class="cap"><span>${r.gravel}% gravel</span><span>${r.surface}</span></div>
@@ -274,6 +337,7 @@
     document.querySelectorAll("[data-state]").forEach((b) => b.setAttribute("aria-pressed", state.st === b.dataset.state));
     $("#shortlist").setAttribute("aria-pressed", state.shortOnly);
     $("#sl-count").textContent = state.short.size;
+    document.body.dataset.season = SEASON(state.month);
 
     const pool = ROUTES.filter((r) =>
       (!state.effort.size || state.effort.has(effortOf(r.difficulty))) &&
@@ -287,23 +351,47 @@
     let html = "";
     if (!pool.length) {
       html = state.shortOnly && !state.short.size
-        ? `<p class="empty">Your shortlist is empty. Star a few rides, then come back here to compare them. <button data-clear>Show every ride</button></p>`
-        : `<p class="empty">No rides match these filters. <button data-clear>Clear filters</button></p>`;
+        ? `<p class="empty">Nothing stamped yet. Stamp a few rides, then come back here to compare them. <button data-clear>Show every ride</button></p>`
+        : `<p class="empty">No rides match all of that. The forest roads are lonely. <button data-clear>Clear filters</button></p>`;
     } else {
-      html += `<div class="section-title"><h2>Good in ${M}</h2><p>${inS.length ? `${inS.length} ride${inS.length === 1 ? "" : "s"}` : "Nothing in season with these filters — see below for what's close."}</p></div>`;
+      html += `<div class="section-title"><h2>Good in ${M}</h2><p>${inS.length ? `${inS.length} ride${inS.length === 1 ? "" : "s"}` : "Nothing in season with these filters"} · <span class="season-line">${SEASON_LINE[SEASON(state.month)]}</span></p></div>`;
       html += inS.map(entry).join("");
       if (outS.length) {
-        html += `<div class="muted"><div class="section-title"><h2>Wait for another month</h2><p>Snow, heat, closures, or harvest traffic make these a poor bet in ${M}.</p></div>${outS.map(entry).join("")}</div>`;
+        html += `<div class="muted"><div class="section-title"><h2>Hibernating in ${M}</h2><p>Snow, heat, closures, or harvest trucks. These are napping until later.</p></div>${outS.map(entry).join("")}</div>`;
       }
     }
     $("#results").innerHTML = html;
     document.querySelectorAll(".star").forEach((b) => b.onclick = () => {
       const id = b.dataset.id; state.short.has(id) ? state.short.delete(id) : state.short.add(id);
-      store.set([...state.short]); render();
+      fresh = state.short.has(id) ? id : null;
+      store.set([...state.short]); render(); fresh = null;
       const again = document.querySelector(`.star[data-id="${id}"]`); if (again) again.focus({ preventScroll: true });
     });
+    document.querySelectorAll(".prof-wrap").forEach(bindRider);
     const clr = document.querySelector("[data-clear]");
     if (clr) clr.onclick = () => { state.effort.clear(); state.st = null; state.shortOnly = false; render(); };
+  }
+  function bindRider(wrap) {
+    const rider = wrap.querySelector(".rider"), bike = rider.querySelector("svg"), alt = rider.querySelector(".alt");
+    const miles = +wrap.dataset.miles;
+    let pts = null;
+    const move = (e) => {
+      const svg = wrap.querySelector("svg.prof"), rect = svg.getBoundingClientRect();
+      if (!pts) { const path = svg.querySelector(".line"), L = path.getTotalLength(); pts = Array.from({ length: 161 }, (_, i) => path.getPointAtLength(L * i / 160)); }
+      const fx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)) * 400;
+      let i = pts.findIndex((p) => p.x >= fx); if (i < 1) i = Math.max(1, i === -1 ? pts.length - 1 : 1);
+      const a = pts[i - 1], b = pts[i], t = (fx - a.x) / ((b.x - a.x) || 1), y = a.y + (b.y - a.y) * t;
+      const sx = rect.width / 400, sy = rect.height / 120;
+      const ang = Math.atan2((b.y - a.y) * sy, (b.x - a.x) * sx) * 180 / Math.PI;
+      rider.style.transform = `translate(${fx * sx}px, ${y * sy}px)`;
+      bike.style.transform = `rotate(${ang}deg)`;
+      const ft = Math.round((116 - y) / 110 * 5400 / 10) * 10;
+      alt.textContent = `${fmt(ft)} ft · mile ${Math.round(fx / 400 * miles)}`;
+      rider.classList.add("on");
+    };
+    wrap.addEventListener("pointermove", move);
+    wrap.addEventListener("pointerdown", move);
+    wrap.addEventListener("pointerleave", () => rider.classList.remove("on"));
   }
   render();
 })();

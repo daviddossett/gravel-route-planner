@@ -16,9 +16,9 @@ Then open:
 
 | Variant | URL | What it's for |
 |---|---|---|
-| **Atlas** (map-first) | http://localhost:4173/variants/atlas/ | Filter routes on a topo map by month, state, distance, climbing, gravel %, and drive time from Portland or Seattle. Select a route to see its elevation profile, water, passes, and hazards, and copy a short ride brief. |
-| **Field Guide** (curated list) | http://localhost:4173/variants/field-guide/ | An editorial guidebook. Pick a month and the rides that are in season come first, with profiles on a shared scale, surface mix, and a season strip. Star rides to build a shortlist (saved in your browser). |
-| **Trip Builder** (multi-day planner) | http://localhost:4173/variants/trip-builder/ | Stack rides into a multi-day trip. It works out the drives between trailheads, totals and saddle time, flags out-of-season days and long drives, and builds a pack list from the routes you picked. Copy the plan as text. Saved in your browser. |
+| **Atlas** (map-first) | http://localhost:4173/variants/atlas/ | Filter routes on a topo map by month, state, distance, climbing, gravel %, and drive time from Portland or Seattle. Hit **Surprise me** to spin the compass to a random match. The selected route gets marching-ant trail dots, a fun-type rating (Chill to Legendary), a post-ride reward, and a badge sticker to earn. |
+| **Field Guide** (curated list) | http://localhost:4173/variants/field-guide/ | An editorial guidebook. Pick a month and the rides that are in season come first, with profiles on a shared scale, surface mix, and a season strip. The illustrated landscape changes with the season you pick. Hover a profile to ride it with a tiny cyclist, and rubber-stamp rides onto your shortlist (saved in your browser). |
+| **Trip Builder** (multi-day planner) | http://localhost:4173/variants/trip-builder/ | Stack rides into a multi-day trip. It works out the drives between trailheads, totals and saddle time, flags out-of-season days and long drives, and builds a pack list from the routes you picked. Adding a day kicks up gravel, rides earn merit badges, fuel is counted in burritos, and a dice button names the trip. Copy the plan as text. Saved in your browser. |
 
 You can also open the HTML files directly (`file://`). Atlas needs an internet connection for map tiles (OpenTopoMap) and Leaflet. All three load Google Fonts and fall back to system fonts when offline.
 
