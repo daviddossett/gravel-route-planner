@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trip Builder · PNW Gravel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #111513;
+    --s1: #181d1a;
+    --s2: #1f2622;
+    --line: #2c3530;
+    --tx: #e9ede7;
+    --tx2: #a5afa8;
+    --amber: #f2b42c;
+    --amber-ink: #1b1505;
+    --ok: #8cc68a;
+    --warn: #f2b42c;
+    --bad: #ff8466;
+    --head: "Barlow Condensed", "Arial Narrow", sans-serif;
+    --body: "Barlow", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--tx); font: 15px/1.45 var(--body); -webkit-font-smoothing: antialiased; }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .top { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; padding: 16px 24px; border-bottom: 1px solid var(--line); background: var(--bg); position: sticky; top: 0; z-index: 5; }
+  .brand { font: 700 22px/1 var(--head); letter-spacing: .01em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+  .brand svg { width: 26px; height: 26px; }
+  .trip-name { font: 600 22px/1 var(--head); background: transparent; border: 0; border-bottom: 1px dashed var(--line); color: var(--tx); padding: 4px 2px; min-width: 0; width: 28ch; }
+  .trip-name:hover { border-bottom-color: var(--tx2); }
+  .ctl { display: flex; align-items: center; gap: 8px; color: var(--tx2); font-size: 13px; }
+  .ctl input[type=date] { font: 500 15px var(--body); background: var(--s1); color: var(--tx); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { background: var(--s1); border: 0; padding: 7px 12px; font-weight: 500; cursor: pointer; font-size: 15px; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--tx); color: var(--bg); }
+  .top .grow { flex: 1; }
+  .acts { display: flex; gap: 8px; }
+  .btn { border: 1px solid var(--line); background: var(--s1); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; transition: background .15s, border-color .15s; }
+  .btn:hover { border-color: var(--tx2); background: var(--s2); }
+  .btn.primary { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
+  .btn.primary:hover { background: #ffc94d; border-color: #ffc94d; }
+
+  .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr) 340px; min-height: calc(100vh - 67px); }
+  .col { padding: 20px 24px 40px; min-width: 0; }
+  .col + .col { border-left: 1px solid var(--line); }
+  .col h2 { font: 600 15px/1 var(--head); text-transform: uppercase; letter-spacing: .08em; color: var(--tx2); margin: 0 0 14px; }
+
+  .search { width: 100%; background: var(--s1); border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; color: var(--tx); font: 15px var(--body); margin-bottom: 10px; }
+  .search::placeholder { color: #87918a; }
+  .lib { display: grid; gap: 0; }
+  .lib-item { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .lib-item .nm { font-weight: 600; line-height: 1.25; }
+  .lib-item .mt { font-size: 13px; color: var(--tx2); }
+  .lib-item .mt .num { font-family: var(--mono); font-size: 13px; }
+  .tag { display: inline-block; font: 600 11px/1 var(--body); padding: 3px 6px; border-radius: 3px; margin-left: 6px; vertical-align: 1px; letter-spacing: .02em; }
+  .tag.off { background: rgba(255, 132, 102, .14); color: var(--bad); }
+  .add { grid-row: 1 / span 2; grid-column: 2; width: 34px; height: 34px; border-radius: 6px; border: 1px solid var(--line); background: var(--s1); cursor: pointer; display: grid; place-items: center; font-size: 20px; line-height: 1; transition: background .15s, color .15s, border-color .15s; }
+  .add:hover:not(:disabled) { background: var(--amber); color: var(--amber-ink); border-color: var(--amber); }
+  .add:disabled { opacity: .35; cursor: not-allowed; }
+
+  .itin { max-width: 760px; }
+  .leg { display: flex; align-items: center; gap: 10px; color: var(--tx2); font-size: 13px; padding: 10px 0 10px 22px; position: relative; }
+  .leg::before { content: ""; position: absolute; left: 7px; top: 0; bottom: 0; border-left: 2px dotted #4a554f; }
+  .leg .num { font-family: var(--mono); color: var(--tx); }
+  .leg svg { width: 16px; height: 16px; flex: none; }
+  .day { background: var(--s1); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; grid-template-columns: 1fr auto; gap: 8px 16px; }
+  .day.warn { border-color: rgba(242, 180, 44, .55); }
+  .day-h { display: flex; align-items: baseline; gap: 12px; }
+  .day-h .d { font: 700 26px/1 var(--head); color: var(--amber); }
+  .day-h .dt { font: 600 15px/1 var(--head); text-transform: uppercase; letter-spacing: .06em; color: var(--tx2); }
+  .day h3 { grid-column: 1; margin: 2px 0 0; font: 600 26px/1.1 var(--head); letter-spacing: .005em; }
+  .day .sub { grid-column: 1; color: var(--tx2); font-size: 15px; margin-top: -4px; }
+  .day .ops { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 6px; align-self: start; }
+  .op { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--line); background: transparent; cursor: pointer; display: grid; place-items: center; color: var(--tx2); }
+  .op:hover:not(:disabled) { color: var(--tx); border-color: var(--tx2); }
+  .op:disabled { opacity: .3; cursor: not-allowed; }
+  .op svg { width: 14px; height: 14px; }
+  .day .row { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, auto) 1fr; gap: 0 28px; align-items: end; margin-top: 6px; }
+  .m .v { font: 500 18px/1.1 var(--mono); }
+  .m .k { font-size: 13px; color: var(--tx2); margin-top: 3px; }
+  .day svg.mini { width: 100%; height: 44px; display: block; }
+  .note { grid-column: 1 / -1; font-size: 13px; color: var(--warn); display: flex; gap: 8px; align-items: flex-start; margin-top: 4px; }
+  .note svg { width: 15px; height: 15px; flex: none; margin-top: 2px; }
+  .empty { border: 1px dashed var(--line); border-radius: 10px; padding: 36px 28px; color: var(--tx2); }
+  .empty h3 { margin: 0 0 6px; font: 600 26px var(--head); color: var(--tx); }
+  .empty p { margin: 0; max-width: 46ch; }
+
+  .ledger { width: 100%; border-collapse: collapse; margin-bottom: 26px; }
+  .ledger th, .ledger td { padding: 9px 0; border-bottom: 1px solid var(--line); text-align: left; font-weight: 400; }
+  .ledger th { color: var(--tx2); font-size: 15px; }
+  .ledger td { text-align: right; font: 500 15px var(--mono); }
+  .ledger tr.total td, .ledger tr.total th { color: var(--tx); font-weight: 600; border-bottom: 0; padding-top: 12px; }
+  .ledger tr.total td { color: var(--amber); font-size: 18px; }
+
+  .checks { list-style: none; padding: 0; margin: 0 0 26px; display: grid; gap: 8px; }
+  .checks li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; }
+  .checks svg { width: 16px; height: 16px; flex: none; margin-top: 2px; }
+  .checks .ok { color: var(--ok); } .checks .warn { color: var(--warn); } .checks .bad { color: var(--bad); }
+  .checks li span { color: var(--tx); }
+  .pack { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
+  .pack label { display: flex; gap: 10px; align-items: flex-start; padding: 7px 8px; margin: 0 -8px; border-radius: 6px; cursor: pointer; font-size: 15px; }
+  .pack label:hover { background: var(--s1); }
+  .pack input { appearance: none; width: 16px; height: 16px; border: 1.5px solid #6d7871; border-radius: 4px; margin: 2px 0 0; flex: none; display: grid; place-items: center; cursor: pointer; }
+  .pack input:checked { background: var(--amber); border-color: var(--amber); }
+  .pack input:checked::after { content: ""; width: 8px; height: 4px; border: 2px solid var(--amber-ink); border-top: 0; border-right: 0; transform: rotate(-45deg) translate(1px, -1px); }
+  .pack input:checked + span { color: var(--tx2); text-decoration: line-through; text-decoration-color: #5b655f; }
+  .why { display: block; font-size: 13px; color: var(--tx2); text-decoration: none !important; }
+  .fine { font-size: 13px; color: var(--tx2); margin-top: 28px; line-height: 1.5; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translate(-50%, 12px); background: var(--tx); color: var(--bg); font-weight: 600; font-size: 15px; padding: 10px 16px; border-radius: 8px; opacity: 0; transition: opacity .2s, transform .3s cubic-bezier(.16, 1, .3, 1); pointer-events: none; z-index: 20; box-shadow: 0 8px 24px -6px rgba(0, 0, 0, .5); }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .day.enter { animation: drop .5s cubic-bezier(.16, 1, .3, 1); }
+  @keyframes drop { from { transform: translateY(-6px); border-color: var(--amber); background: var(--s2); } to { transform: none; } }
+
+  @media (max-width: 1180px) {
+    .layout { grid-template-columns: 300px minmax(0, 1fr); }
+    .summary { grid-column: 1 / -1; border-left: 0 !important; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 0 40px; }
+  }
+  @media (max-width: 760px) {
+    .layout { grid-template-columns: 1fr; }
+    .col + .col { border-left: 0; border-top: 1px solid var(--line); }
+    .itin-col { order: -1; }
+    .top { position: static; }
+    .trip-name { width: 100%; }
+    .day .row { grid-template-columns: repeat(2, auto); gap: 10px 28px; }
+    .day .row .prof { grid-column: 1 / -1; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="8" cy="21" r="6" fill="none" stroke="#f2b42c" stroke-width="2.4"/><circle cx="24" cy="21" r="6" fill="none" stroke="#f2b42c" stroke-width="2.4"/><path d="M8 21l5-9h8l3 9M13 12l-1.5-3H9M21 12l1-3h3" fill="none" stroke="#e9ede7" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    Trip Builder
+  </div>
+  <input class="trip-name" id="name" aria-label="Trip name" maxlength="48">
+  <label class="ctl">Leaving <input type="date" id="date"></label>
+  <div class="ctl"><span id="home-l">Home</span>
+    <div class="seg" role="group" aria-labelledby="home-l" id="home">
+      <button data-v="pdx" aria-pressed="true">Portland</button>
+      <button data-v="sea" aria-pressed="false">Seattle</button>
+    </div>
+  </div>
+  <div class="grow"></div>
+  <div class="acts">
+    <button class="btn" id="clear">Clear trip</button>
+    <button class="btn primary" id="copy">Copy plan</button>
+  </div>
+</header>
+
+<div class="layout">
+  <section class="col" aria-labelledby="lib-h">
+    <h2 id="lib-h">Route library</h2>
+    <input class="search" id="q" type="search" placeholder="Search by name, region, or town" aria-label="Search routes">
+    <div class="lib" id="lib"></div>
+    <p class="fine">Sample data. Mileage, climbing, drive times, and seasons are approximate — verify closures and passes with the land manager.</p>
+  </section>
+
+  <section class="col itin-col" aria-labelledby="it-h">
+    <h2 id="it-h">Itinerary</h2>
+    <div class="itin" id="itin" aria-live="polite"></div>
+  </section>
+
+  <aside class="col summary" aria-label="Trip summary">
+    <div>
+      <h2>Totals</h2>
+      <table class="ledger" id="ledger"></table>
+    </div>
+    <div>
+      <h2>Readiness</h2>
+      <ul class="checks" id="checks"></ul>
+    </div>
+    <div>
+      <h2>Pack list</h2>
+      <ul class="pack" id="pack"></ul>
+    </div>
+  </aside>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="../../data/routes.js"></script>
+<script>
+(() => {
+  const ROUTES = window.PNW_ROUTES;
+  const byId = Object.fromEntries(ROUTES.map((r) => [r.id, r]));
+  const $ = (s) => document.querySelector(s);
+  const fmt = (n) => n.toLocaleString("en-US");
+  const MAX_DAYS = 5;
+  const KEY = "pnw-trip-builder-v1";
+  const HOME = { pdx: "Portland", sea: "Seattle" };
+  const HOT = new Set(["big-summit", "fort-rock", "klickitat", "steptoe"]);
+
+  const nextSat = () => { const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7 || 7)); return d.toISOString().slice(0, 10); };
+  const seed = { name: "Gorge & Ochocos long weekend", date: nextSat(), home: "pdx", days: ["lolo-pass", "klickitat", "big-summit"], packed: [] };
+  let S;
+  try { S = { ...seed, ...JSON.parse(localStorage.getItem(KEY) || "null") }; } catch { S = { ...seed }; }
+  S.days = (S.days || []).filter((id) => byId[id]);
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+
+  const icon = {
+    car: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 10.5V8l1.6-3.6c.2-.5.6-.8 1.1-.8h5.6c.5 0 .9.3 1.1.8L13.5 8v2.5M2.5 10.5h11v1.8h-2v-1.8M4.5 12.3h-2v-1.8M2.5 8h11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>',
+    up: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 13V3M3.5 7.5L8 3l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    down: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3.5 8.5L8 13l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    x: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    ok: '<svg class="ok" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5 8.2l2 2 4-4.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    warn: '<svg class="warn" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8l6.5 11.7H1.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M8 6.2v3.4M8 11.4v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+    bad: '<svg class="bad" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  };
+
+  // Rough road distance between two start points: great-circle × 1.35 at ~50 mph.
+  function driveBetween(a, b) {
+    const [la1, lo1] = a.path[0], [la2, lo2] = b.path[0];
+    const R = 3959, t = Math.PI / 180;
+    const h = Math.sin((la2 - la1) * t / 2) ** 2 + Math.cos(la1 * t) * Math.cos(la2 * t) * Math.sin((lo2 - lo1) * t / 2) ** 2;
+    const mi = 2 * R * Math.asin(Math.sqrt(h));
+    return Math.max(0.3, Math.round((mi * 1.35 / 50) * 10) / 10);
+  }
+  const saddle = (r) => r.miles / 11 + r.gain / 3000;
+  const h1 = (h) => Number(h).toFixed(1);
+  const hm = (h) => { const H = Math.floor(h), M = Math.round((h - H) * 60); return M === 60 ? `${H + 1}h 00m` : `${H}h ${String(M).padStart(2, "0")}m`; };
+  const dayDate = (i) => { const d = new Date(S.date + "T12:00:00"); d.setDate(d.getDate() + i); return d; };
+  const monthOf = (i) => dayDate(i).getMonth() + 1;
+  const dateLabel = (i) => dayDate(i).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+
+  function mini(r) {
+    const W = 300, H = 44, lo = 0, hi = 5400;
+    const pts = r.profile.map((v, i) => `${(i / (r.profile.length - 1) * W).toFixed(1)},${(H - 2 - (v - lo) / (hi - lo) * (H - 6)).toFixed(1)}`).join(" ");
+    return `<svg class="mini" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Elevation profile"><polygon points="0,${H} ${pts} ${W},${H}" fill="rgba(242,180,44,.14)"/><polyline points="${pts}" fill="none" stroke="#f2b42c" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>`;
+  }
+
+  // Library
+  $("#q").addEventListener("input", renderLib);
+  function renderLib() {
+    const q = $("#q").value.trim().toLowerCase();
+    const months = new Set(Array.from({ length: Math.max(1, S.days.length) }, (_, i) => monthOf(i)));
+    const items = ROUTES.filter((r) => !q || [r.name, r.region, r.area, r.start, r.state].join(" ").toLowerCase().includes(q));
+    const full = S.days.length >= MAX_DAYS;
+    $("#lib").innerHTML = items.length ? items.map((r) => {
+      const inTrip = S.days.includes(r.id);
+      const off = ![...months].some((m) => r.months.includes(m));
+      const label = inTrip ? `${r.name} is already in the trip` : full ? `Trip is full at ${MAX_DAYS} days` : `Add ${r.name} as the next day`;
+      return `<div class="lib-item">
+        <div class="nm">${r.name}${off ? '<span class="tag off">Out of season</span>' : ""}</div>
+        <button class="add" data-add="${r.id}" ${inTrip || full ? "disabled" : ""} aria-label="${label}" title="${label}">${inTrip ? "✓" : "+"}</button>
+        <div class="mt">${r.region}, ${r.state} · <span class="num">${r.miles}mi ${fmt(r.gain)}ft</span></div>
+      </div>`;
+    }).join("") : `<p style="color:var(--tx2)">No routes match “${q.replace(/</g, "&lt;")}”.</p>`;
+  }
+  $("#lib").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-add]"); if (!b || b.disabled) return;
+    S.days.push(b.dataset.add); save(); render(S.days.length - 1);
+  });
+
+  // Itinerary
+  function renderItin(enterIdx) {
+    const el = $("#itin");
+    if (!S.days.length) {
+      el.innerHTML = `<div class="empty"><h3>No rides yet</h3><p>Add a route from the library to make it Day 1. Each ride you add becomes the next day, with the drive between trailheads worked out for you.</p></div>`;
+      return;
+    }
+    const homeName = HOME[S.home];
+    let html = "";
+    S.days.forEach((id, i) => {
+      const r = byId[id];
+      const prev = i ? byId[S.days[i - 1]] : null;
+      const drive = prev ? driveBetween(prev, r) : r.drive[S.home];
+      html += `<div class="leg">${icon.car}<span><span class="num">${h1(drive)} h</span> drive from ${prev ? prev.start : homeName} to ${r.start}</span></div>`;
+      const off = !r.months.includes(monthOf(i));
+      html += `<article class="day ${off ? "warn" : ""} ${i === enterIdx ? "enter" : ""}" aria-label="Day ${i + 1}: ${r.name}">
+        <div class="day-h"><span class="d">Day ${i + 1}</span><span class="dt">${dateLabel(i)}</span></div>
+        <div class="ops">
+          <button class="op" data-mv="${i}" data-dir="-1" ${i === 0 ? "disabled" : ""} aria-label="Move day ${i + 1} earlier">${icon.up}</button>
+          <button class="op" data-mv="${i}" data-dir="1" ${i === S.days.length - 1 ? "disabled" : ""} aria-label="Move day ${i + 1} later">${icon.down}</button>
+          <button class="op" data-rm="${i}" aria-label="Remove ${r.name} from trip">${icon.x}</button>
+        </div>
+        <h3>${r.name}</h3>
+        <div class="sub">${r.area} · ${r.surface}</div>
+        <div class="row">
+          <div class="m"><div class="v">${r.miles}</div><div class="k">miles</div></div>
+          <div class="m"><div class="v">${fmt(r.gain)}</div><div class="k">ft climbing</div></div>
+          <div class="m"><div class="v">${hm(saddle(r))}</div><div class="k">est. saddle time</div></div>
+          <div class="m"><div class="v">${r.gravel}%</div><div class="k">gravel</div></div>
+          <div class="prof">${mini(r)}</div>
+        </div>
+        ${off ? `<div class="note">${icon.warn}<span>Usually not rideable in ${dayDate(i).toLocaleDateString("en-US", { month: "long" })}. ${r.cautions[0]}. Consider swapping days or picking another route.</span></div>` : ""}
+      </article>`;
+    });
+    const last = byId[S.days[S.days.length - 1]];
+    html += `<div class="leg">${icon.car}<span><span class="num">${h1(last.drive[S.home])} h</span> drive home to ${homeName}</span></div>`;
+    el.innerHTML = html;
+  }
+  $("#itin").addEventListener("click", (e) => {
+    const mv = e.target.closest("[data-mv]"), rm = e.target.closest("[data-rm]");
+    if (mv && !mv.disabled) {
+      const i = +mv.dataset.mv, j = i + +mv.dataset.dir;
+      [S.days[i], S.days[j]] = [S.days[j], S.days[i]]; save(); render(j);
+      const again = document.querySelector(`[data-mv="${j}"][data-dir="${mv.dataset.dir}"]:not(:disabled)`) || document.querySelector(`[data-rm="${j}"]`);
+      if (again) again.focus();
+    } else if (rm) {
+      const r = byId[S.days[+rm.dataset.rm]];
+      S.days.splice(+rm.dataset.rm, 1); save(); render(); toast(`Removed ${r.name}`);
+    }
+  });
+
+  function plan() {
+    const rs = S.days.map((id) => byId[id]);
+    const legs = rs.map((r, i) => (i ? driveBetween(rs[i - 1], r) : r.drive[S.home]));
+    if (rs.length) legs.push(rs[rs.length - 1].drive[S.home]);
+    return {
+      rs, legs,
+      miles: rs.reduce((a, r) => a + r.miles, 0),
+      gain: rs.reduce((a, r) => a + r.gain, 0),
+      saddle: rs.reduce((a, r) => a + saddle(r), 0),
+      drive: legs.reduce((a, b) => a + b, 0),
+    };
+  }
+
+  function renderSummary() {
+    const p = plan();
+    $("#ledger").innerHTML = `
+      <tr><th scope="row">Riding days</th><td>${p.rs.length}</td></tr>
+      <tr><th scope="row">Distance</th><td>${fmt(p.miles)} mi</td></tr>
+      <tr><th scope="row">Climbing</th><td>${fmt(p.gain)} ft</td></tr>
+      <tr><th scope="row">Driving</th><td>${hm(p.drive)}</td></tr>
+      <tr class="total"><th scope="row">Saddle time</th><td>${hm(p.saddle)}</td></tr>`;
+
+    const checks = [];
+    if (!p.rs.length) checks.push(["warn", "Add at least one ride to check readiness."]);
+    const off = p.rs.map((r, i) => [r, i]).filter(([r, i]) => !r.months.includes(monthOf(i)));
+    off.length ? off.forEach(([r, i]) => checks.push(["bad", `Day ${i + 1}: ${r.name} is out of season on ${dateLabel(i)}.`]))
+      : p.rs.length && checks.push(["ok", "Every ride is in season for your dates."]);
+    const big = p.rs.map((r, i) => [r, i]).filter(([r]) => saddle(r) > 5.5);
+    big.forEach(([r, i]) => checks.push(["warn", `Day ${i + 1} is a long one — about ${hm(saddle(r))} on the bike. Start early.`]));
+    const longDrive = p.legs.map((h, i) => [h, i]).filter(([h]) => h > 3.5);
+    longDrive.forEach(([h, i]) => checks.push(["warn", i < p.rs.length ? `${h} h drive before Day ${i + 1}. Consider driving the night before.` : `${h} h drive home after the last ride.`]));
+    const dry = p.rs.filter((r) => r.water === "none");
+    if (dry.length) checks.push(["warn", `No water on ${dry.map((r) => r.name).join(", ")}. Carry it all.`]);
+    if (p.rs.length && !big.length && !longDrive.length && !dry.length && !off.length) checks.push(["ok", "Reasonable days and drives. Nice plan."]);
+    $("#checks").innerHTML = checks.map(([k, t]) => `<li>${icon[k]}<span>${t}</span></li>`).join("");
+
+    renderPack(p);
+  }
+
+  function renderPack(p) {
+    const items = [];
+    const add = (id, label, why) => items.push({ id, label, why });
+    if (p.rs.length) {
+      const tire = Math.max(...p.rs.map((r) => r.tire));
+      add("tires", `${tire}mm or wider tires`, `Needed for ${p.rs.find((r) => r.tire === tire).name}`);
+      add("repair", "Tubeless plugs, spare tube, pump, multitool", "Every route is far from a shop");
+      const water = p.rs.some((r) => r.water === "none") ? "none" : p.rs.some((r) => r.water === "limited") ? "limited" : "reliable";
+      if (water === "none") add("water", "3+ liters of capacity per rider", "At least one route has no refills");
+      else if (water === "limited") add("water", "2+ liters and a filter or tablets", "Refills are sparse");
+      else add("water", "Water filter", "Creeks along the way — treat everything");
+      const passes = [...new Set(p.rs.map((r) => r.pass).filter(Boolean).map((s) => s.replace(/ at .+$/, "")))];
+      passes.forEach((ps) => add("pass-" + ps, ps, "Display at the trailhead"));
+      if (p.rs.some((r) => r.id === "iron-horse")) add("lights", "Real front and rear lights", "2.3-mile unlit Snoqualmie Tunnel");
+      if (p.rs.some((r) => HOT.has(r.id))) add("sun", "Sun sleeves, sunscreen, electrolytes", "Exposed, hot terrain");
+      if (p.rs.some((r) => r.cautions.some((c) => /cell|remote|tell someone/i.test(c)))) add("sat", "Offline maps and a satellite messenger", "No cell coverage on parts of the route");
+      if (p.rs.some((r) => r.cautions.some((c) => /hunting/i.test(c)))) add("blaze", "Bright clothing", "Hunting season overlaps");
+      if (p.rs.some((r) => r.cautions.some((c) => /snow/i.test(c)))) add("layer", "Warm layer and full-finger gloves", "Snow can linger at elevation");
+      add("food", `${Math.ceil(p.saddle * 250 / 100) * 100} kcal of ride food`, "About 250 kcal per hour of riding");
+    }
+    const packed = new Set(S.packed);
+    $("#pack").innerHTML = items.length ? items.map((it) => `<li><label><input type="checkbox" data-pk="${it.id}" ${packed.has(it.id) ? "checked" : ""}><span>${it.label}<span class="why">${it.why}</span></span></label></li>`).join("")
+      : `<li style="color:var(--tx2);font-size:14px">Your pack list builds itself from the rides you add.</li>`;
+  }
+  $("#pack").addEventListener("change", (e) => {
+    const id = e.target.dataset.pk; if (!id) return;
+    const s = new Set(S.packed); e.target.checked ? s.add(id) : s.delete(id); S.packed = [...s]; save();
+  });
+
+  // Header controls
+  $("#name").value = S.name; $("#date").value = S.date;
+  $("#name").addEventListener("input", (e) => { S.name = e.target.value; save(); });
+  $("#date").addEventListener("change", (e) => { if (e.target.value) { S.date = e.target.value; save(); render(); } });
+  $("#home").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; S.home = b.dataset.v; save(); render(); });
+  $("#clear").addEventListener("click", () => {
+    if (!S.days.length) return;
+    const prev = { ...S, days: [...S.days] };
+    S.days = []; S.packed = []; save(); render();
+    toast("Trip cleared", () => { Object.assign(S, prev); save(); render(); });
+  });
+  $("#copy").addEventListener("click", () => {
+    const p = plan();
+    if (!p.rs.length) { toast("Add a ride before copying the plan"); return; }
+    const lines = [`${S.name || "Gravel trip"} — leaving ${dateLabel(0)} from ${HOME[S.home]}`, ""];
+    p.rs.forEach((r, i) => lines.push(`Day ${i + 1} (${dateLabel(i)}): ${r.name} — ${r.miles} mi, ${fmt(r.gain)} ft, ~${hm(saddle(r))}. Start: ${r.start}. Drive in: ${p.legs[i]} h.`));
+    lines.push(`Drive home: ${p.legs[p.legs.length - 1]} h`, "", `Totals: ${p.miles} mi · ${fmt(p.gain)} ft · ${hm(p.saddle)} riding · ${hm(p.drive)} driving`, "(Sample data — verify conditions before you go.)");
+    const t = lines.join("\n");
+    navigator.clipboard ? navigator.clipboard.writeText(t).then(() => toast("Plan copied to clipboard"), () => toast("Couldn't access the clipboard")) : toast("Clipboard isn't available here");
+  });
+
+  let tt;
+  function toast(msg, undo) {
+    const el = $("#toast");
+    el.innerHTML = msg + (undo ? ' · <button style="background:none;border:0;padding:0;font-weight:700;text-decoration:underline;cursor:pointer;pointer-events:auto">Undo</button>' : "");
+    el.style.pointerEvents = undo ? "auto" : "none";
+    if (undo) el.querySelector("button").onclick = () => { undo(); el.classList.remove("show"); };
+    el.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => el.classList.remove("show"), undo ? 5000 : 2000);
+  }
+
+  function render(enterIdx) {
+    document.querySelectorAll("#home button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === S.home));
+    renderLib(); renderItin(enterIdx); renderSummary();
+  }
+  render();
+})();
+</script>
+</body>
+</html>

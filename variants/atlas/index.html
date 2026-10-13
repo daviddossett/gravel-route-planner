@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gravel Atlas · Pacific Northwest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+  :root {
+    --paper: #f4f1ea;
+    --paper-2: #ebe6da;
+    --ink: #18201b;
+    --ink-2: #4a524c;
+    --line: #d6d0c2;
+    --forest: #2d5a3d;
+    --rust: #c8431b;
+    --route: #5b4636;
+    --sans: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: var(--sans); color: var(--ink); background: var(--paper); -webkit-font-smoothing: antialiased; }
+
+  .app { display: grid; grid-template-columns: 384px 1fr; height: 100vh; }
+  .panel { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--paper); z-index: 2; }
+  .masthead { padding: 22px 22px 14px; border-bottom: 1px solid var(--line); }
+  .masthead h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.05; }
+  .masthead p { margin: 6px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.4; }
+
+  .filters { padding: 14px 22px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 14px; }
+  .field { display: grid; gap: 6px; }
+  .field-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 600; }
+  .field-head output { font-family: var(--mono); font-weight: 500; font-size: 12px; color: var(--ink-2); }
+  .months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; }
+  .months button, .seg button {
+    font: 500 12px/1 var(--sans); padding: 7px 0; border: 1px solid var(--line); background: #fbfaf6; color: var(--ink);
+    cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+  }
+  .months button { border-radius: 3px; padding: 7px 0; }
+  .months button:hover, .seg button:hover { border-color: var(--ink-2); }
+  .months button[aria-pressed="true"], .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .seg button { border-radius: 0; margin-left: -1px; }
+  .seg button:first-child { border-radius: 3px 0 0 3px; margin-left: 0; }
+  .seg button:last-child { border-radius: 0 3px 3px 0; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  input[type=range] { width: 100%; accent-color: var(--forest); margin: 0; }
+  button:focus-visible, input:focus-visible, .route:focus-visible { outline: 2px solid var(--rust); outline-offset: 2px; }
+
+  .list-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 22px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--line); }
+  .list-head button { font: 500 13px var(--sans); background: none; border: 0; color: var(--forest); cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+  .list { overflow-y: auto; flex: 1; min-height: 0; }
+  .route { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 22px; border-bottom: 1px solid var(--line); cursor: pointer; background: transparent; transition: background .15s; }
+  .route:hover { background: var(--paper-2); }
+  .route[aria-selected="true"] { background: #fff; }
+  .route[aria-selected="true"] h3 { color: var(--rust); }
+  .route h3 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.2; }
+  .route .where { grid-column: 1; font-size: 13px; color: var(--ink-2); }
+  .route .nums { grid-row: 1 / span 2; grid-column: 2; text-align: right; font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--ink-2); }
+  .route .nums b { color: var(--ink); font-weight: 500; }
+  .empty { padding: 28px 22px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+  .empty button { font: inherit; color: var(--forest); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  .disclaimer { padding: 10px 22px 12px; font-size: 12px; line-height: 1.4; color: var(--ink-2); border-top: 1px solid var(--line); background: var(--paper-2); }
+
+  .stage { position: relative; min-width: 0; }
+  #map { position: absolute; inset: 0; background: #dfe3d6; }
+  #map .leaflet-tile-pane { filter: saturate(.38) contrast(.92) brightness(1.06); }
+  .map-fallback { position: absolute; inset: 0; display: none; place-items: center; text-align: center; padding: 40px; color: var(--ink-2); }
+
+  .drawer {
+    position: absolute; left: 16px; right: 16px; bottom: 16px; z-index: 500;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 6px;
+    box-shadow: 0 10px 30px -8px rgba(24, 32, 27, .35), 0 2px 6px rgba(24, 32, 27, .12);
+    display: grid; grid-template-columns: minmax(240px, 300px) 1fr; gap: 0; overflow: hidden;
+    transform: translateY(calc(100% + 24px)); transition: transform .45s cubic-bezier(.16, 1, .3, 1);
+  }
+  .drawer.open { transform: none; }
+  .drawer .info { padding: 18px 20px; border-right: 1px solid var(--line); display: grid; gap: 10px; align-content: start; }
+  .drawer h2 { margin: 0; font-size: 22px; line-height: 1.1; letter-spacing: -0.01em; }
+  .drawer .area { font-size: 13px; color: var(--ink-2); margin-top: -4px; }
+  .stats { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 4px 18px; }
+  .stat .v { font-family: var(--mono); font-size: 17px; font-weight: 500; }
+  .stat .k { font-size: 12px; color: var(--ink-2); }
+  .drawer .actions { display: flex; gap: 8px; margin-top: 4px; }
+  .btn { font: 600 13px var(--sans); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; }
+  .btn.ghost { background: transparent; color: var(--ink); }
+  .btn:hover { background: var(--forest); border-color: var(--forest); color: var(--paper); }
+  .drawer .detail { padding: 16px 20px 18px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 6px 28px; min-width: 0; }
+  .profile { grid-column: 1 / -1; }
+  .profile svg { width: 100%; height: 96px; display: block; }
+  .profile .axis { font: 11px var(--mono); fill: var(--ink-2); }
+  .detail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; line-height: 1.4; }
+  .detail dt { color: var(--ink-2); }
+  .detail dd { margin: 0; }
+  .detail ul { margin: 0; padding-left: 16px; font-size: 13px; line-height: 1.5; }
+  .detail h4 { margin: 4px 0 2px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .close { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border: 0; background: transparent; font-size: 20px; color: var(--ink-2); cursor: pointer; border-radius: 4px; }
+  .close:hover { background: var(--paper-2); color: var(--ink); }
+  .toast { position: absolute; top: 16px; left: 50%; transform: translate(-50%, -8px); opacity: 0; z-index: 600; background: var(--ink); color: var(--paper); font-size: 13px; padding: 8px 14px; border-radius: 4px; transition: opacity .2s, transform .2s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  .leaflet-container { font-family: var(--sans); }
+  .start-pin { width: 12px; height: 12px; border-radius: 50%; background: var(--paper); border: 3px solid var(--ink); }
+  .start-pin.on { border-color: var(--rust); }
+  .leaflet-tooltip.rt { font: 600 12px var(--sans); background: var(--ink); color: var(--paper); border: 0; border-radius: 3px; padding: 4px 8px; box-shadow: none; }
+  .leaflet-tooltip.rt::before { display: none; }
+
+  @media (max-width: 1100px) {
+    .drawer { grid-template-columns: 1fr; max-height: 70%; overflow-y: auto; }
+    .drawer .info { border-right: 0; border-bottom: 1px solid var(--line); }
+  }
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 46vh 1fr; height: auto; min-height: 100vh; }
+    .stage { grid-row: 1; position: sticky; top: 0; height: 46vh; z-index: 1; }
+    .panel { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); }
+    .list { overflow: visible; }
+    .drawer { position: fixed; left: 8px; right: 8px; bottom: 8px; max-height: 64vh; }
+    .drawer .detail { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, auto); }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="panel" aria-label="Route filters and list">
+    <header class="masthead">
+      <h1>Gravel Atlas</h1>
+      <p>Find a Pacific Northwest gravel ride that fits the month, your legs, and your tires.</p>
+    </header>
+
+    <section class="filters" aria-label="Filters">
+      <div class="field">
+        <div class="field-head"><span id="month-label">Riding in</span><output id="month-out"></output></div>
+        <div class="months" role="group" aria-labelledby="month-label" id="months"></div>
+      </div>
+      <div class="field">
+        <div class="field-head"><span id="state-label">State</span></div>
+        <div class="seg" role="group" aria-labelledby="state-label" id="state">
+          <button data-v="all" aria-pressed="true">Both</button>
+          <button data-v="OR" aria-pressed="false">Oregon</button>
+          <button data-v="WA" aria-pressed="false">Washington</button>
+        </div>
+      </div>
+      <div class="row-2">
+        <label class="field"><span class="field-head">Max distance <output id="dist-out"></output></span>
+          <input type="range" id="dist" min="25" max="70" step="5" value="70"></label>
+        <label class="field"><span class="field-head">Max climbing <output id="gain-out"></output></span>
+          <input type="range" id="gain" min="1500" max="6000" step="500" value="6000"></label>
+      </div>
+      <div class="row-2">
+        <label class="field"><span class="field-head">Min gravel <output id="grav-out"></output></span>
+          <input type="range" id="grav" min="0" max="100" step="10" value="0"></label>
+        <label class="field"><span class="field-head">Drive from <output id="drive-out"></output></span>
+          <input type="range" id="drive" min="1" max="7" step="0.5" value="7"></label>
+      </div>
+      <div class="seg" role="group" aria-label="Drive time measured from" id="origin">
+        <button data-v="pdx" aria-pressed="true">Portland</button>
+        <button data-v="sea" aria-pressed="false">Seattle</button>
+        <button data-v="any" aria-pressed="false">Either</button>
+      </div>
+    </section>
+
+    <div class="list-head"><span id="count" aria-live="polite"></span><button id="reset">Reset filters</button></div>
+    <div class="list" id="list" role="listbox" aria-label="Matching routes"></div>
+    <p class="disclaimer">Sample data. Lines and stats are approximate — confirm closures, passes, and fire restrictions with the land manager before you ride.</p>
+  </aside>
+
+  <main class="stage">
+    <div id="map" role="region" aria-label="Map of routes"></div>
+    <div class="map-fallback" id="fallback">The map needs an internet connection to load tiles. The route list still works.</div>
+    <div class="toast" id="toast" role="status"></div>
+    <section class="drawer" id="drawer" aria-live="polite" aria-label="Selected route"></section>
+  </main>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="../../data/routes.js"></script>
+<script>
+(() => {
+  const ROUTES = window.PNW_ROUTES;
+  const MONTHS = ["J","F","M","A","M","J","J","A","S","O","N","D"];
+  const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const $ = (s) => document.querySelector(s);
+  const defaults = { month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, origin: "pdx" };
+  const f = { ...defaults };
+  let selected = null;
+
+  const fmt = (n) => n.toLocaleString("en-US");
+
+  // Month buttons
+  const monthsEl = $("#months");
+  MONTHS.forEach((m, i) => {
+    const b = document.createElement("button");
+    b.textContent = m; b.dataset.v = i + 1; b.setAttribute("aria-label", MONTH_NAMES[i]);
+    monthsEl.append(b);
+  });
+  monthsEl.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    f.month = f.month === +b.dataset.v ? 0 : +b.dataset.v; render();
+  });
+  const bindSeg = (el, key) => el.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return; f[key] = b.dataset.v; render();
+  });
+  bindSeg($("#state"), "state"); bindSeg($("#origin"), "origin");
+  ["dist", "gain", "grav", "drive"].forEach((k) => $("#" + k).addEventListener("input", (e) => { f[k] = +e.target.value; render(); }));
+  $("#reset").addEventListener("click", () => { Object.assign(f, defaults); render(); });
+
+  // Map
+  let map = null; const layers = {};
+  if (window.L) {
+    map = L.map("map", { zoomControl: false, attributionControl: true }).setView([45.6, -121.4], 7);
+    L.control.zoom({ position: "topright" }).addTo(map);
+    L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+      maxZoom: 15, subdomains: "abc",
+      attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, SRTM · Style © <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
+    }).addTo(map);
+    ROUTES.forEach((r) => {
+      const casing = L.polyline(r.path, { color: "#fff", weight: 9, opacity: .95, lineJoin: "round" });
+      const line = L.polyline(r.path, { color: getComputedStyle(document.documentElement).getPropertyValue("--route").trim(), weight: 5, opacity: .95, lineJoin: "round" });
+      const pin = L.marker(r.path[0], { icon: L.divIcon({ className: "", html: '<div class="start-pin"></div>', iconSize: [12, 12], iconAnchor: [6, 6] }), keyboard: false });
+      const group = L.layerGroup([casing, line, pin]);
+      [line, casing, pin].forEach((l) => {
+        l.on("click", () => select(r.id, true));
+        l.bindTooltip(r.name, { className: "rt", sticky: true, direction: "top", offset: [0, -6] });
+      });
+      layers[r.id] = { group, line, casing, pin };
+    });
+    map.fitBounds(L.latLngBounds(ROUTES.flatMap((r) => r.path)), { padding: [40, 40] });
+  } else {
+    $("#fallback").style.display = "grid";
+  }
+
+  function matches(r) {
+    if (f.month && !r.months.includes(f.month)) return false;
+    if (f.state !== "all" && r.state !== f.state) return false;
+    if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav) return false;
+    const d = f.origin === "any" ? Math.min(r.drive.pdx, r.drive.sea) : r.drive[f.origin];
+    return d <= f.drive;
+  }
+
+  function render() {
+    // controls
+    [...monthsEl.children].forEach((b) => b.setAttribute("aria-pressed", +b.dataset.v === f.month));
+    $("#month-out").textContent = f.month ? MONTH_NAMES[f.month - 1] : "Any month";
+    document.querySelectorAll("#state button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === f.state));
+    document.querySelectorAll("#origin button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === f.origin));
+    ["dist", "gain", "grav", "drive"].forEach((k) => $("#" + k).value = f[k]);
+    $("#dist-out").textContent = `${f.dist} mi`;
+    $("#gain-out").textContent = `${fmt(f.gain)} ft`;
+    $("#grav-out").textContent = `${f.grav}%`;
+    $("#drive-out").textContent = f.drive >= 7 ? "any" : `≤ ${f.drive} h`;
+
+    const shown = ROUTES.filter(matches).sort((a, b) => (f.origin === "sea" ? a.drive.sea - b.drive.sea : a.drive.pdx - b.drive.pdx));
+    $("#count").textContent = `${shown.length} of ${ROUTES.length} routes`;
+
+    const list = $("#list");
+    list.innerHTML = "";
+    if (!shown.length) {
+      list.innerHTML = `<div class="empty">Nothing fits all of these filters. Try a different month or <button type="button" id="reset2">reset filters</button>.</div>`;
+      $("#reset2").onclick = () => { Object.assign(f, defaults); render(); };
+    }
+    shown.forEach((r) => {
+      const el = document.createElement("div");
+      el.className = "route"; el.tabIndex = 0; el.setAttribute("role", "option"); el.dataset.id = r.id;
+      el.setAttribute("aria-selected", r.id === selected);
+      const d = f.origin === "sea" ? r.drive.sea : f.origin === "any" ? Math.min(r.drive.pdx, r.drive.sea) : r.drive.pdx;
+      el.innerHTML = `<h3>${r.name}</h3>
+        <div class="nums"><b>${r.miles}</b> mi · <b>${fmt(r.gain)}</b> ft<br>${r.gravel}% gravel · ${d}h</div>
+        <div class="where">${r.region}, ${r.state} · ${r.start}</div>`;
+      el.addEventListener("click", () => select(r.id, true));
+      el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(r.id, true); } });
+      el.addEventListener("mouseenter", () => hover(r.id, true));
+      el.addEventListener("mouseleave", () => hover(r.id, false));
+      list.append(el);
+    });
+
+    if (map) {
+      const ids = new Set(shown.map((r) => r.id));
+      ROUTES.forEach((r) => {
+        const L_ = layers[r.id];
+        if (ids.has(r.id)) L_.group.addTo(map); else L_.group.remove();
+      });
+      styleLines();
+    }
+    if (selected && !shown.find((r) => r.id === selected)) closeDrawer();
+  }
+
+  function styleLines(hoverId) {
+    if (!map) return;
+    const base = getComputedStyle(document.documentElement).getPropertyValue("--route").trim();
+    const rust = getComputedStyle(document.documentElement).getPropertyValue("--rust").trim();
+    ROUTES.forEach((r) => {
+      const l = layers[r.id]; const on = r.id === selected || r.id === hoverId;
+      l.line.setStyle({ color: on ? rust : base, weight: on ? 6 : 5, opacity: selected && !on ? .5 : .95 });
+      l.casing.setStyle({ weight: on ? 11 : 9 });
+      if (on) { l.casing.bringToFront(); l.line.bringToFront(); }
+      const pinEl = l.pin.getElement && l.pin.getElement();
+      if (pinEl) pinEl.firstChild.classList.toggle("on", on);
+    });
+  }
+  function hover(id, on) { styleLines(on ? id : null); }
+
+  function select(id, fly) {
+    selected = id;
+    const r = ROUTES.find((x) => x.id === id);
+    document.querySelectorAll(".route").forEach((el) => el.setAttribute("aria-selected", el.dataset.id === id));
+    const row = document.querySelector(`.route[data-id="${id}"]`);
+    if (row) row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    openDrawer(r);
+    styleLines();
+    if (map && fly) {
+      const isMobile = matchMedia("(max-width: 760px)").matches;
+      map.flyToBounds(L.latLngBounds(r.path), { paddingTopLeft: [40, 40], paddingBottomRight: [40, isMobile ? 40 : 300], duration: .8, maxZoom: 11 });
+    }
+  }
+
+  function profileSVG(r) {
+    const W = 640, H = 96, P = { l: 40, r: 6, t: 8, b: 18 };
+    const lo = Math.min(...r.profile), hi = Math.max(...r.profile);
+    const pad = Math.max(200, (hi - lo) * .1);
+    const y0 = Math.max(0, lo - pad), y1 = hi + pad;
+    const x = (i) => P.l + (i / (r.profile.length - 1)) * (W - P.l - P.r);
+    const y = (v) => P.t + (1 - (v - y0) / (y1 - y0)) * (H - P.t - P.b);
+    const pts = r.profile.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+    const area = `M${x(0)},${H - P.b} L${pts.join(" L")} L${x(r.profile.length - 1)},${H - P.b} Z`;
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Elevation profile from ${fmt(lo)} to ${fmt(hi)} feet">
+      <defs><linearGradient id="pf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2d5a3d" stop-opacity=".45"/><stop offset="1" stop-color="#2d5a3d" stop-opacity=".06"/></linearGradient></defs>
+      <line x1="${P.l}" x2="${W - P.r}" y1="${y(hi)}" y2="${y(hi)}" stroke="#d6d0c2" stroke-dasharray="2 3"/>
+      <line x1="${P.l}" x2="${W - P.r}" y1="${y(lo)}" y2="${y(lo)}" stroke="#d6d0c2" stroke-dasharray="2 3"/>
+      <path d="${area}" fill="url(#pf)"/>
+      <polyline points="${pts.join(" ")}" fill="none" stroke="#2d5a3d" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+      <text class="axis" x="0" y="${y(hi) + 4}">${fmt(hi)}′</text>
+      <text class="axis" x="0" y="${y(lo) + 4}">${fmt(lo)}′</text>
+      <text class="axis" x="${P.l}" y="${H - 3}">0 mi</text>
+      <text class="axis" x="${W - P.r}" y="${H - 3}" text-anchor="end">${r.miles} mi</text>
+    </svg>`;
+  }
+
+  const waterLabel = { reliable: "Reliable", limited: "Limited", none: "None — carry it all" };
+  function openDrawer(r) {
+    const d = $("#drawer");
+    d.innerHTML = `
+      <button class="close" aria-label="Close route details">×</button>
+      <div class="info">
+        <h2>${r.name}</h2>
+        <div class="area">${r.area} · ${r.region}, ${r.state}</div>
+        <div class="stats">
+          <div class="stat"><div class="v">${r.miles}</div><div class="k">miles</div></div>
+          <div class="stat"><div class="v">${fmt(r.gain)}</div><div class="k">ft climb</div></div>
+          <div class="stat"><div class="v">${r.gravel}%</div><div class="k">gravel</div></div>
+          <div class="stat"><div class="v">${r.tire}</div><div class="k">mm tires</div></div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="copy">Copy ride brief</button>
+          <button class="btn ghost" id="zoom">Zoom to route</button>
+        </div>
+      </div>
+      <div class="detail">
+        <div class="profile">${profileSVG(r)}</div>
+        <dl>
+          <dt>Start</dt><dd>${r.start}</dd>
+          <dt>Surface</dt><dd>${r.surface}</dd>
+          <dt>Water</dt><dd>${waterLabel[r.water]}. ${r.waterNote}</dd>
+          <dt>Pass</dt><dd>${r.pass || "None needed"}</dd>
+          <dt>Season</dt><dd>${seasonText(r.months)}</dd>
+        </dl>
+        <div>
+          <h4>Why go</h4><ul>${r.highlights.map((h) => `<li>${h}</li>`).join("")}</ul>
+          <h4>Watch for</h4><ul>${r.cautions.map((h) => `<li>${h}</li>`).join("")}</ul>
+        </div>
+      </div>`;
+    d.classList.add("open");
+    d.querySelector(".close").onclick = closeDrawer;
+    d.querySelector("#zoom").onclick = () => select(r.id, true);
+    d.querySelector("#copy").onclick = () => copyBrief(r);
+  }
+  function closeDrawer() {
+    selected = null; $("#drawer").classList.remove("open");
+    document.querySelectorAll(".route").forEach((el) => el.setAttribute("aria-selected", "false"));
+    styleLines();
+  }
+  function seasonText(ms) {
+    const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const runs = []; let start = ms[0], prev = ms[0];
+    for (let i = 1; i <= ms.length; i++) {
+      if (ms[i] === prev + 1) { prev = ms[i]; continue; }
+      runs.push(start === prev ? names[start - 1] : `${names[start - 1]}–${names[prev - 1]}`);
+      start = prev = ms[i];
+    }
+    return runs.join(", ");
+  }
+  function copyBrief(r) {
+    const text = `${r.name} (${r.area}, ${r.state})\n${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\n(Sample data — verify before riding.)`;
+    const done = () => toast("Ride brief copied");
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => toast("Couldn't access the clipboard"));
+    else toast("Clipboard isn't available in this browser");
+  }
+  let tt; function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && selected) closeDrawer(); });
+
+  render();
+  const first = ROUTES.filter(matches)[0];
+  if (new URLSearchParams(location.search).has("demo") && first) select(first.id, false);
+})();
+</script>
+</body>
+</html>
