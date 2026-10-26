@@ -193,6 +193,7 @@
   .drawer .detail { padding: 16px 20px 18px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 6px 28px; min-width: 0; }
   .profile { grid-column: 1 / -1; }
   .profile svg { width: 100%; height: 96px; display: block; }
+  .profile .sketch { margin: 4px 0 0; font-size: 12px; line-height: 1.4; color: var(--ink-2); }
   .profile .axis { font: 11px var(--mono); fill: var(--ink-2); }
   .detail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; line-height: 1.4; }
   .detail dt { color: var(--ink-2); }
@@ -326,6 +327,8 @@
 
   const fmt = (n) => n.toLocaleString("en-US");
   const FUN = { 1: "Chill", 2: "Cruisy", 3: "Spicy", 4: "Type 2 fun", 5: "Legendary" };
+  const TYPE = { loop: "Loop", "out-and-back": "Out-and-back", "point-to-point": "Point-to-point" };
+  const TYPE_NOTE = { loop: "Ends where it starts.", "out-and-back": "Ride out and back the same way. Miles are round trip.", "point-to-point": "One way. Plan a shuttle or a second car." };
 
   // Month buttons
   const monthsEl = $("#months");
@@ -425,7 +428,7 @@
       const d = driveFrom(r);
       el.innerHTML = `<h3>${r.name}</h3>
         <div class="nums"><b>${r.miles}</b> mi · <b>${fmt(r.gain)}</b> ft<br>${r.gravel}% gravel<br>${d.h}h from ${d.from.toUpperCase()}</div>
-        <div class="where">${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span></div>`;
+        <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span></div>`;
       el.addEventListener("click", () => select(r.id, true, true));
       el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(r.id, true, true); } });
       el.addEventListener("mouseenter", () => hover(r.id, true));
@@ -546,9 +549,10 @@
         <div class="sticker" aria-label="Badge for riding this route: ${r.badge}"><small>Ride it, earn it</small><b>${r.badge}</b></div>
       </div>
       <div class="detail">
-        <div class="profile">${profileSVG(r)}</div>
+        <div class="profile">${profileSVG(r)}<p class="sketch">Map line and profile are rough sketches, not a GPS track. Stated miles and climbing are the better guide. Load a real track before you ride.</p></div>
         <dl>
           <dt>Fun type</dt><dd><span class="fun f${r.difficulty}" style="margin:0">${FUN[r.difficulty]}</span></dd>
+          <dt>Route type</dt><dd>${TYPE[r.type]}. ${TYPE_NOTE[r.type]}</dd>
           <dt>Start</dt><dd>${r.start}</dd>
           <dt>Surface</dt><dd>${r.surface}</dd>
           <dt>Water</dt><dd>${waterLabel[r.water]}. ${r.waterNote}</dd>
@@ -589,7 +593,7 @@
     return runs.join(", ");
   }
   function copyBrief(r) {
-    const text = `${r.name} (${r.area}, ${r.state})\n${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\n(Sample data — verify before riding.)`;
+    const text = `${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]} · ${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\n(Sample data — verify before riding.)`;
     const done = () => toast("Ride brief copied. Go get dusty.");
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => toast("Couldn't access the clipboard"));
     else toast("Clipboard isn't available in this browser");
