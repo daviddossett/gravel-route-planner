@@ -18,6 +18,10 @@ Then open http://localhost:4173/variants/atlas/.
 
 You can also open `variants/atlas/index.html` directly (`file://`). The map needs an internet connection for Leaflet and the OpenTopoMap tiles; without one, the route list still works. Google Fonts falls back to system fonts when you're offline.
 
+### Offline
+
+When served over http(s), a service worker ([`variants/atlas/sw.js`](variants/atlas/sw.js)) saves the page, route data, and the scripts, styles, and fonts it loaded, so a page you opened at home reopens at the trailhead with no signal. It also keeps up to 400 map tiles you've already viewed for 7 days, matching OpenTopoMap's cache headers. Nothing is prefetched. If the map library can't load, [`offline.js`](variants/atlas/offline.js) draws the route outlines as a simple SVG that still highlights the selected route, and a banner on the map says you're offline. There's no service worker on `file://`.
+
 ## Layout
 
 ```
