@@ -201,7 +201,7 @@
     <div id="map" role="region" aria-label="Map of routes"></div>
     <div class="map-fallback" id="fallback">The map needs an internet connection to load tiles. The route list still works.</div>
     <div class="toast" id="toast" role="status"></div>
-    <section class="drawer" id="drawer" aria-live="polite" aria-label="Selected route"></section>
+    <section class="drawer" id="drawer" aria-label="Selected route" inert></section>
   </main>
 </div>
 
@@ -216,6 +216,9 @@
   const defaults = { month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, origin: "pdx" };
   const f = { ...defaults };
   let selected = null;
+  let active = null; // the one route row in the tab order (roving tabindex)
+  let returnTo = null; // where focus goes when the drawer closes
+  const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const fmt = (n) => n.toLocaleString("en-US");
   const FUN = { 1: "Chill", 2: "Cruisy", 3: "Spicy", 4: "Type 2 fun", 5: "Legendary" };
@@ -254,7 +257,7 @@
       const ants = L.polyline(r.path, { color: "#fff", weight: 2.5, opacity: 0, dashArray: "0.1 12", lineCap: "round", className: "ants", interactive: false });
       const group = L.layerGroup([casing, line, ants, pin]);
       [line, casing, pin].forEach((l) => {
-        l.on("click", () => select(r.id, true));
+        l.on("click", () => select(r.id, true, true));
         l.bindTooltip(r.name, { className: "rt", sticky: true, direction: "top", offset: [0, -6] });
       });
       layers[r.id] = { group, line, casing, ants, pin };
@@ -288,6 +291,8 @@
     $("#count").textContent = `${shown.length} of ${ROUTES.length} routes`;
 
     const list = $("#list");
+    const hadFocus = list.contains(document.activeElement);
+    if (!shown.some((r) => r.id === active)) active = shown.some((r) => r.id === selected) ? selected : shown[0] ? shown[0].id : null;
     list.innerHTML = "";
     if (!shown.length) {
       list.innerHTML = `<div class="empty">Nothing out there fits all of that. Even the cows are confused. Try another month or <button type="button" id="reset2">reset filters</button>.</div>`;
@@ -295,18 +300,23 @@
     }
     shown.forEach((r) => {
       const el = document.createElement("div");
-      el.className = "route"; el.tabIndex = 0; el.setAttribute("role", "option"); el.dataset.id = r.id;
+      el.className = "route"; el.tabIndex = r.id === active ? 0 : -1; el.setAttribute("role", "option"); el.dataset.id = r.id;
       el.setAttribute("aria-selected", r.id === selected);
       const d = f.origin === "sea" ? r.drive.sea : f.origin === "any" ? Math.min(r.drive.pdx, r.drive.sea) : r.drive.pdx;
       el.innerHTML = `<h3>${r.name}</h3>
         <div class="nums"><b>${r.miles}</b> mi · <b>${fmt(r.gain)}</b> ft<br>${r.gravel}% gravel · ${d}h</div>
         <div class="where">${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span></div>`;
-      el.addEventListener("click", () => select(r.id, true));
-      el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(r.id, true); } });
+      el.addEventListener("click", () => select(r.id, true, true));
+      el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(r.id, true, true); } });
       el.addEventListener("mouseenter", () => hover(r.id, true));
       el.addEventListener("mouseleave", () => hover(r.id, false));
+      el.addEventListener("focus", () => { setActive(r.id); hover(r.id, true); });
+      el.addEventListener("blur", () => hover(r.id, false));
       list.append(el);
     });
+    if (hadFocus && !list.contains(document.activeElement)) {
+      const row = list.querySelector(".route[tabindex='0']"); if (row) row.focus();
+    }
 
     if (map) {
       const ids = new Set(shown.map((r) => r.id));
@@ -335,18 +345,39 @@
   }
   function hover(id, on) { styleLines(on ? id : null); }
 
-  function select(id, fly) {
+  function setActive(id) {
+    active = id;
+    document.querySelectorAll("#list .route").forEach((el) => { el.tabIndex = el.dataset.id === id ? 0 : -1; });
+  }
+  $("#list").addEventListener("keydown", (e) => {
+    const rows = [...document.querySelectorAll("#list .route")];
+    const i = rows.indexOf(e.target);
+    if (i < 0) return;
+    const next = { ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: rows.length - 1 }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    rows[Math.max(0, Math.min(rows.length - 1, next))].focus();
+  });
+
+  function select(id, fly, moveFocus) {
     selected = id;
     const r = ROUTES.find((x) => x.id === id);
     document.querySelectorAll(".route").forEach((el) => el.setAttribute("aria-selected", el.dataset.id === id));
     const row = document.querySelector(`.route[data-id="${id}"]`);
-    if (row) row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (row) { setActive(id); row.scrollIntoView({ block: "nearest", behavior: reduceMotion() ? "auto" : "smooth" }); }
+    if (moveFocus && !$("#drawer").contains(document.activeElement)) returnTo = document.activeElement;
     openDrawer(r);
     styleLines();
-    if (map && fly) {
-      const isMobile = matchMedia("(max-width: 760px)").matches;
-      map.flyToBounds(L.latLngBounds(r.path), { paddingTopLeft: [40, 40], paddingBottomRight: [40, isMobile ? 40 : 300], duration: .8, maxZoom: 11 });
-    }
+    if (fly) flyToRoute(r);
+    if (moveFocus) $("#drawer-title").focus({ preventScroll: true });
+  }
+
+  function flyToRoute(r) {
+    if (!map) return;
+    const isMobile = matchMedia("(max-width: 760px)").matches;
+    const bounds = L.latLngBounds(r.path), opts = { paddingTopLeft: [40, 40], paddingBottomRight: [40, isMobile ? 40 : 300], maxZoom: 11 };
+    if (reduceMotion()) map.fitBounds(bounds, { ...opts, animate: false });
+    else map.flyToBounds(bounds, { ...opts, duration: .8 });
   }
 
   function profileSVG(r) {
@@ -377,7 +408,7 @@
     d.innerHTML = `
       <button class="close" aria-label="Close route details">×</button>
       <div class="info">
-        <h2>${r.name}</h2>
+        <h2 id="drawer-title" tabindex="-1">${r.name}</h2>
         <div class="area">${r.area} · ${r.region}, ${r.state}</div>
         <p class="quip">${r.quip}</p>
         <div class="stats">
@@ -408,15 +439,22 @@
           <h4>Watch for</h4><ul>${r.cautions.map((h) => `<li>${h}</li>`).join("")}</ul>
         </div>
       </div>`;
-    d.classList.add("open");
-    d.querySelector(".close").onclick = closeDrawer;
-    d.querySelector("#zoom").onclick = () => select(r.id, true);
+    d.classList.add("open"); d.inert = false;
+    d.querySelector(".close").onclick = () => closeDrawer(true);
+    d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
   }
-  function closeDrawer() {
-    selected = null; $("#drawer").classList.remove("open");
+  function closeDrawer(restoreFocus) {
+    const id = selected, d = $("#drawer");
+    selected = null; d.classList.remove("open"); d.inert = true;
     document.querySelectorAll(".route").forEach((el) => el.setAttribute("aria-selected", "false"));
     styleLines();
+    if (restoreFocus) {
+      const back = returnTo && returnTo.isConnected && returnTo !== document.body ? returnTo
+        : document.querySelector(`.route[data-id="${id}"]`) || document.querySelector("#list .route[tabindex='0']");
+      if (back) back.focus();
+    }
+    returnTo = null;
   }
   function seasonText(ms) {
     const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -435,14 +473,18 @@
     else toast("Clipboard isn't available in this browser");
   }
   let tt; function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && selected) closeDrawer(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !selected) return;
+    const a = document.activeElement;
+    closeDrawer($("#drawer").contains(a) || a === document.body);
+  });
   $("#spin").addEventListener("click", () => {
     const pool = ROUTES.filter(matches).filter((r) => r.id !== selected);
     if (!pool.length) { toast("Nothing to spin to. Loosen a filter or two."); return; }
     const b = $("#spin"); b.classList.remove("go"); void b.offsetWidth; b.classList.add("go");
     const pick = pool[Math.floor(Math.random() * pool.length)];
     const wait = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 900;
-    setTimeout(() => { select(pick.id, true); toast(`The compass says: ${pick.name}`); }, wait);
+    setTimeout(() => { select(pick.id, true, true); toast(`The compass says: ${pick.name}`); }, wait);
   });
 
   render();
