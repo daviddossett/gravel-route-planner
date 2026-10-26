@@ -138,10 +138,18 @@
   }
   @media (max-width: 760px) {
     .app { grid-template-columns: 1fr; grid-template-rows: 46vh 1fr; height: auto; min-height: 100vh; }
-    .stage { grid-row: 1; position: sticky; top: 0; height: 46vh; z-index: 1; }
+    /* Above .panel so the pinned map and the fixed route sheet (inside .stage) aren't painted over by the list. */
+    .stage { grid-row: 1; position: sticky; top: 0; height: 46vh; z-index: 3; }
     .panel { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); }
     .list { overflow: visible; }
-    .drawer { position: fixed; left: 8px; right: 8px; bottom: 8px; max-height: 64vh; }
+    .drawer {
+      position: fixed; left: 8px; right: 8px; bottom: 8px;
+      max-height: calc(54vh - 16px); max-height: calc(100dvh - 46vh - 16px);
+      display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain;
+    }
+    .drawer .info, .drawer .detail { flex: none; }
+    .drawer h2 { padding-right: 36px; }
+    .drawer .close { position: sticky; top: 8px; flex: none; align-self: flex-end; margin: 8px 8px -40px 0; z-index: 1; background: var(--paper); }
     .drawer .detail { grid-template-columns: 1fr; }
     .stats { grid-template-columns: repeat(2, auto); }
   }
