@@ -1,6 +1,7 @@
 // Offline support for Gravel Atlas.
-// - App shell + same-origin files: network first (short timeout), cached copy when offline.
-// - Cross-origin scripts, styles, and fonts: cached copy first, refreshed in the background.
+// - App shell + same-origin files (including self-hosted Leaflet and fonts in /vendor):
+//   precached, then network first (short timeout), cached copy when offline.
+// - Any cross-origin scripts, styles, and fonts: cached copy first, refreshed in the background.
 // - Map tiles: only tiles the rider has already viewed, capped, and kept for the 7 days
 //   OpenTopoMap's cache headers allow. Nothing is prefetched or bulk-downloaded.
 const VERSION = "v1";
@@ -10,7 +11,13 @@ const TILES = `atlas-tiles-${VERSION}`;
 const MAX_TILES = 400;
 const TILE_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 const NETWORK_TIMEOUT = 3000;
-const PRECACHE = ["./", "./index.html", "./offline.js", "../../data/routes.js"];
+const VENDOR = "../../vendor/";
+const PRECACHE = [
+  "./", "./index.html", "./offline.js", "../../data/routes.js",
+  `${VENDOR}leaflet-1.9.4/leaflet.js`, `${VENDOR}leaflet-1.9.4/leaflet.css`,
+  ...["sans-condensed-400", "sans-condensed-500", "sans-condensed-600", "sans-condensed-700", "mono-400", "mono-500"]
+    .map((f) => `${VENDOR}fonts/ibm-plex/ibm-plex-${f}-latin.woff2`),
+];
 const TILE_PATH = /\/\d+\/\d+\/\d+\.(png|jpe?g|webp)$/;
 
 self.addEventListener("install", (e) => {
@@ -50,7 +57,7 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(networkFirst(req));
   } else if (req.destination === "image" && TILE_PATH.test(url.pathname)) {
     e.respondWith(tile(req, e));
-  } else if (["script", "style", "font"].includes(req.destination) || url.hostname.startsWith("fonts.")) {
+  } else if (["script", "style", "font"].includes(req.destination)) {
     e.respondWith(staleWhileRevalidate(req, e));
   }
 });

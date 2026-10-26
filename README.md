@@ -18,7 +18,7 @@ python3 -m http.server 4173
 
 Then open http://localhost:4173/variants/atlas/.
 
-You can also open `variants/atlas/index.html` directly (`file://`). The map needs an internet connection for Leaflet and the OpenTopoMap tiles; without one, the route list still works. Google Fonts falls back to system fonts when you're offline.
+You can also open `variants/atlas/index.html` directly (`file://`). Leaflet and the IBM Plex fonts are self-hosted in [`vendor/`](vendor/), so only the OpenTopoMap tiles need an internet connection; without one, the route list still works.
 
 ### Offline
 
@@ -57,4 +57,5 @@ data/routes.js           sample route data (window.PNW_ROUTES)
 scripts/check-routes.js  route data checker
 tests/                   Playwright smoke tests (dev only)
 variants/atlas/          map-first planner (Leaflet + OpenTopoMap)
+vendor/                  self-hosted Leaflet 1.9.4 and IBM Plex fonts, with licenses
 ```
