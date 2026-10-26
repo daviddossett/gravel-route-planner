@@ -45,7 +45,7 @@
   .field { display: grid; gap: 6px; }
   .field-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 600; }
   .field-head output { font-family: var(--mono); font-weight: 500; font-size: 12px; color: var(--ink-2); }
-  .months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; }
+  .months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; min-height: 28px; }
   .months button, .seg button {
     font: 500 12px/1 var(--sans); padding: 7px 0; border: 1px solid var(--line); background: #fbfaf6; color: var(--ink);
     cursor: pointer; transition: background .15s, color .15s, border-color .15s;
@@ -144,6 +144,7 @@
     .filters { padding: 12px 22px 14px; gap: 10px; }
     .field { gap: 4px; }
     .field:has(> .seg) { grid-template-columns: auto 1fr; align-items: center; gap: 14px; }
+    .months { min-height: 24px; }
     .months button, .seg button { padding: 5px 0; }
     .list-head { position: sticky; top: 0; z-index: 1; background: var(--paper); padding: 8px 22px; }
     .list { flex: none; overflow: visible; }
