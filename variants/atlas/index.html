@@ -186,8 +186,8 @@
           <input type="range" id="drive" min="1" max="7" step="0.5" value="7"></label>
       </div>
       <div class="seg" role="group" aria-label="Drive time measured from" id="origin">
-        <button data-v="pdx" aria-pressed="true">Portland</button>
-        <button data-v="sea" aria-pressed="false">Seattle</button>
+        <button data-v="sea" aria-pressed="true">Seattle</button>
+        <button data-v="pdx" aria-pressed="false">Portland</button>
         <button data-v="any" aria-pressed="false">Either</button>
       </div>
     </section>
@@ -213,8 +213,12 @@
   const MONTHS = ["J","F","M","A","M","J","J","A","S","O","N","D"];
   const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const $ = (s) => document.querySelector(s);
-  const defaults = { month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, origin: "pdx" };
-  const f = { ...defaults };
+  const defaults = { month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, origin: "sea" };
+  const ORIGIN_KEY = "atlas.origin";
+  // localStorage can throw (private mode, blocked storage); fall back to the default.
+  const loadOrigin = () => { try { const v = localStorage.getItem(ORIGIN_KEY); return ["sea", "pdx", "any"].includes(v) ? v : null; } catch { return null; } };
+  const saveOrigin = () => { try { localStorage.setItem(ORIGIN_KEY, f.origin); } catch {} };
+  const f = { ...defaults, origin: loadOrigin() || defaults.origin };
   let selected = null;
 
   const fmt = (n) => n.toLocaleString("en-US");
@@ -235,8 +239,10 @@
     const b = e.target.closest("button"); if (!b) return; f[key] = b.dataset.v; render();
   });
   bindSeg($("#state"), "state"); bindSeg($("#origin"), "origin");
+  $("#origin").addEventListener("click", saveOrigin);
   ["dist", "gain", "grav", "drive"].forEach((k) => $("#" + k).addEventListener("input", (e) => { f[k] = +e.target.value; render(); }));
-  $("#reset").addEventListener("click", () => { Object.assign(f, defaults); render(); });
+  const resetFilters = () => { Object.assign(f, defaults); saveOrigin(); render(); };
+  $("#reset").addEventListener("click", resetFilters);
 
   // Map
   let map = null; const layers = {};
@@ -268,8 +274,13 @@
     if (f.month && !r.months.includes(f.month)) return false;
     if (f.state !== "all" && r.state !== f.state) return false;
     if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav) return false;
-    const d = f.origin === "any" ? Math.min(r.drive.pdx, r.drive.sea) : r.drive[f.origin];
-    return d <= f.drive;
+    return driveFrom(r).h <= f.drive;
+  }
+
+  // Drive hours from the chosen city; for "any", the shorter drive and which city it's from.
+  function driveFrom(r) {
+    const from = f.origin === "any" ? (r.drive.sea <= r.drive.pdx ? "sea" : "pdx") : f.origin;
+    return { h: r.drive[from], from };
   }
 
   function render() {
@@ -284,22 +295,22 @@
     $("#grav-out").textContent = `${f.grav}%`;
     $("#drive-out").textContent = f.drive >= 7 ? "any" : `≤ ${f.drive} h`;
 
-    const shown = ROUTES.filter(matches).sort((a, b) => (f.origin === "sea" ? a.drive.sea - b.drive.sea : a.drive.pdx - b.drive.pdx));
+    const shown = ROUTES.filter(matches).sort((a, b) => driveFrom(a).h - driveFrom(b).h);
     $("#count").textContent = `${shown.length} of ${ROUTES.length} routes`;
 
     const list = $("#list");
     list.innerHTML = "";
     if (!shown.length) {
       list.innerHTML = `<div class="empty">Nothing out there fits all of that. Even the cows are confused. Try another month or <button type="button" id="reset2">reset filters</button>.</div>`;
-      $("#reset2").onclick = () => { Object.assign(f, defaults); render(); };
+      $("#reset2").onclick = resetFilters;
     }
     shown.forEach((r) => {
       const el = document.createElement("div");
       el.className = "route"; el.tabIndex = 0; el.setAttribute("role", "option"); el.dataset.id = r.id;
       el.setAttribute("aria-selected", r.id === selected);
-      const d = f.origin === "sea" ? r.drive.sea : f.origin === "any" ? Math.min(r.drive.pdx, r.drive.sea) : r.drive.pdx;
+      const d = driveFrom(r);
       el.innerHTML = `<h3>${r.name}</h3>
-        <div class="nums"><b>${r.miles}</b> mi · <b>${fmt(r.gain)}</b> ft<br>${r.gravel}% gravel · ${d}h</div>
+        <div class="nums"><b>${r.miles}</b> mi · <b>${fmt(r.gain)}</b> ft<br>${r.gravel}% gravel<br>${d.h}h from ${d.from.toUpperCase()}</div>
         <div class="where">${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span></div>`;
       el.addEventListener("click", () => select(r.id, true));
       el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(r.id, true); } });
