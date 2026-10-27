@@ -31,6 +31,20 @@
     apply();
   })();
 </script>
+<meta name="description" content="Plan a gravel ride in Oregon or Washington. Filter routes on a topo map by month, distance, climbing, gravel, and drive time from Portland or Seattle, then share a link to the route.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Gravel Atlas">
+<meta property="og:title" content="Gravel Atlas · Pacific Northwest">
+<meta property="og:description" content="Pick a month, poke the map, and go get gloriously dusty. Gravel routes across Oregon and Washington, filtered by distance, climbing, gravel, and drive time.">
+<meta property="og:image" content="og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Gravel Atlas: a topo map of Pacific Northwest gravel routes beside a filterable route list">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Gravel Atlas · Pacific Northwest">
+<meta name="twitter:description" content="Gravel routes across Oregon and Washington, filtered by month, distance, climbing, gravel, and drive time.">
+<meta name="twitter:image" content="og-image.png">
+<meta name="twitter:image:alt" content="Gravel Atlas: a topo map of Pacific Northwest gravel routes beside a filterable route list">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -186,7 +200,7 @@
   .stats { display: grid; grid-template-columns: repeat(4, auto); justify-content: start; gap: 4px 18px; }
   .stat .v { font-family: var(--mono); font-size: 17px; font-weight: 500; }
   .stat .k { font-size: 12px; color: var(--ink-2); }
-  .drawer .actions { display: flex; gap: 8px; margin-top: 4px; }
+  .drawer .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
   .btn { font: 600 13px var(--sans); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--ink); }
   .btn:hover { background: var(--forest); border-color: var(--forest); color: var(--paper); }
@@ -478,6 +492,7 @@
       styleLines();
     }
     if (selected && !shown.find((r) => r.id === selected)) closeDrawer();
+    syncUrl();
   }
 
   function styleLines(hoverId) {
@@ -520,6 +535,7 @@
     if (moveFocus && !$("#drawer").contains(document.activeElement)) returnTo = document.activeElement;
     openDrawer(r);
     styleLines();
+    syncUrl();
     if (fly) flyToRoute(r);
     if (moveFocus) $("#drawer-title").focus({ preventScroll: true });
   }
@@ -578,6 +594,7 @@
         </div>
         <div class="actions">
           <button class="btn" id="copy">Copy ride brief</button>
+          <button class="btn ghost" id="copy-link">Copy link</button>
           <button class="btn ghost" id="zoom">Zoom to route</button>
         </div>
         <div class="sticker" aria-label="Badge for riding this route: ${r.badge}"><small>Ride it, earn it</small><b>${r.badge}</b></div>
@@ -603,12 +620,14 @@
     d.querySelector(".close").onclick = () => closeDrawer(true);
     d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
+    d.querySelector("#copy-link").onclick = () => copyText(shareUrl(), "Link copied. Paste it in the club chat.");
   }
   function closeDrawer(restoreFocus) {
     const id = selected, d = $("#drawer");
     selected = null; d.classList.remove("open"); d.inert = true;
     document.querySelectorAll(".route").forEach((el) => el.setAttribute("aria-selected", "false"));
     styleLines();
+    syncUrl();
     if (restoreFocus) {
       const back = returnTo && returnTo.isConnected && returnTo !== document.body ? returnTo
         : document.querySelector(`.route[data-id="${id}"]`) || document.querySelector("#list .route[tabindex='0']");
@@ -627,10 +646,53 @@
     return runs.join(", ");
   }
   function copyBrief(r) {
-    const text = `${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]} · ${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\n(Sample data — verify before riding.)`;
-    const done = () => toast("Ride brief copied. Go get dusty.");
-    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => toast("Couldn't access the clipboard"));
+    const text = `${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]} · ${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\nMap: ${shareUrl()}\n(Sample data — verify before riding.)`;
+    copyText(text, "Ride brief copied. Go get dusty.");
+  }
+  function copyText(text, msg) {
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast(msg), () => toast("Couldn't access the clipboard"));
     else toast("Clipboard isn't available in this browser");
+  }
+
+  // Shareable links: the URL mirrors the selected route and any non-default filters.
+  function stateParams() {
+    const p = new URLSearchParams();
+    if (selected) p.set("route", selected);
+    const changed = ["state", "dist", "gain", "grav", "drive"].filter((k) => f[k] !== defaults[k]);
+    // Pin month and origin on any shared state so the link reads the same whatever the viewer's current month or saved origin.
+    if (selected || changed.length || f.month !== defaults.month || f.origin !== defaults.origin) {
+      p.set("month", f.month || "any");
+      p.set("origin", f.origin);
+    }
+    changed.forEach((k) => p.set(k, f[k]));
+    return p;
+  }
+  function shareUrl() {
+    const q = stateParams().toString();
+    return location.href.split(/[?#]/)[0] + (q ? `?${q}` : "");
+  }
+  function syncUrl() {
+    const p = stateParams();
+    if (new URLSearchParams(location.search).has("demo")) p.set("demo", "");
+    const q = p.toString().replace(/demo=(&|$)/, "demo$1");
+    try { history.replaceState(null, "", location.pathname + (q ? `?${q}` : "") + location.hash); } catch (e) { /* file:// in some browsers */ }
+  }
+  function readUrl() {
+    const p = new URLSearchParams(location.search);
+    const segValues = (id) => [...document.querySelectorAll(`#${id} button`)].map((b) => b.dataset.v);
+    const m = p.get("month");
+    if (m === "any") f.month = 0;
+    else if (/^\d{1,2}$/.test(m) && +m >= 1 && +m <= 12) f.month = +m;
+    if (segValues("state").includes(p.get("state"))) f.state = p.get("state");
+    if (segValues("origin").includes(p.get("origin"))) f.origin = p.get("origin");
+    ["dist", "gain", "grav", "drive"].forEach((k) => {
+      const v = p.get(k), el = $("#" + k);
+      if (v === null || v.trim() === "" || !isFinite(v)) return;
+      const min = +el.min, max = +el.max, step = +el.step;
+      f[k] = Math.min(max, Math.max(min, min + Math.round((+v - min) / step) * step));
+    });
+    const r = ROUTES.find((x) => x.id === p.get("route"));
+    return r ? r.id : null;
   }
   let tt; function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
   document.addEventListener("keydown", (e) => {
@@ -647,9 +709,18 @@
     setTimeout(() => { select(pick.id, true, true); toast(`The compass says: ${pick.name}`); }, wait);
   });
 
+  const linked = readUrl();
   render();
+  if (linked) {
+    if (!ROUTES.filter(matches).some((r) => r.id === linked)) {
+      Object.assign(f, defaults, { month: 0, origin: f.origin });
+      render();
+      toast("Filters loosened to show the linked route");
+    }
+    select(linked, true);
+  }
   const first = ROUTES.filter(matches)[0];
-  if (new URLSearchParams(location.search).has("demo") && first) select(first.id, true);
+  if (!linked && new URLSearchParams(location.search).has("demo") && first) select(first.id, true);
 })();
 </script>
 </body>
