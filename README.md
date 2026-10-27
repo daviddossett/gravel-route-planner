@@ -34,10 +34,25 @@ It reports **errors** (exit 1) for missing or malformed fields, an unknown `type
 
 Each route's `type` is `loop`, `out-and-back`, or `point-to-point`. Draw out-and-back paths one way only; `miles` is the round trip.
 
+## Tests
+
+The site has no dependencies. Playwright is a dev-only dependency for browser smoke tests:
+
+```sh
+npm install
+npx playwright install chromium
+npm test
+```
+
+`npm test` serves the repo with `python3 -m http.server 4190` and loads `variants/atlas/index.html?demo` in Chromium at 1440×800 (light) and 390×844 (dark, mobile). It fails on page or console errors (map-tile and network failures are ignored), an empty route list, a details drawer that's covered by something else, or Esc not closing the drawer. It also loads the page so the service worker installs, goes offline, reloads, and checks the route list still renders. The date is pinned to mid-July so the month filter always matches routes.
+
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the route data check and the smoke tests on every pull request and on pushes to `main`.
+
 ## Layout
 
 ```
 data/routes.js           sample route data (window.PNW_ROUTES)
 scripts/check-routes.js  route data checker
+tests/                   Playwright smoke tests (dev only)
 variants/atlas/          map-first planner (Leaflet + OpenTopoMap)
 ```
