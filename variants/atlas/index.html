@@ -45,11 +45,18 @@
 <meta name="twitter:description" content="Gravel routes across Oregon and Washington, filtered by month, distance, climbing, gravel, and drive time.">
 <meta name="twitter:image" content="og-image.png">
 <meta name="twitter:image:alt" content="Gravel Atlas: a topo map of Pacific Northwest gravel routes beside a filterable route list">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<script>
+  // Font preloads are CORS requests, which file:// pages can't make (WebKit then skips the font entirely).
+  if (location.protocol !== "file:") document.head.append(Object.assign(document.createElement("link"), { rel: "preload", href: "../../vendor/fonts/ibm-plex/ibm-plex-sans-condensed-400-latin.woff2", as: "font", type: "font/woff2", crossOrigin: "" }));
+</script>
+<link rel="stylesheet" href="../../vendor/leaflet-1.9.4/leaflet.css">
 <style>
+  @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 400; font-display: swap; src: url(../../vendor/fonts/ibm-plex/ibm-plex-sans-condensed-400-latin.woff2) format("woff2"); }
+  @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 500; font-display: swap; src: url(../../vendor/fonts/ibm-plex/ibm-plex-sans-condensed-500-latin.woff2) format("woff2"); }
+  @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 600; font-display: swap; src: url(../../vendor/fonts/ibm-plex/ibm-plex-sans-condensed-600-latin.woff2) format("woff2"); }
+  @font-face { font-family: "IBM Plex Sans Condensed"; font-weight: 700; font-display: swap; src: url(../../vendor/fonts/ibm-plex/ibm-plex-sans-condensed-700-latin.woff2) format("woff2"); }
+  @font-face { font-family: "IBM Plex Mono"; font-weight: 400; font-display: swap; src: url(../../vendor/fonts/ibm-plex/ibm-plex-mono-400-latin.woff2) format("woff2"); }
+  @font-face { font-family: "IBM Plex Mono"; font-weight: 500; font-display: swap; src: url(../../vendor/fonts/ibm-plex/ibm-plex-mono-500-latin.woff2) format("woff2"); }
   :root {
     --paper: #f4f1ea;
     --paper-2: #ebe6da;
@@ -346,7 +353,7 @@
   </main>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="../../vendor/leaflet-1.9.4/leaflet.js"></script>
 <script src="../../data/routes.js"></script>
 <script src="offline.js"></script>
 <script>
@@ -370,6 +377,14 @@
   const FUN = { 1: "Chill", 2: "Cruisy", 3: "Spicy", 4: "Type 2 fun", 5: "Legendary" };
   const TYPE = { loop: "Loop", "out-and-back": "Out-and-back", "point-to-point": "Point-to-point" };
   const TYPE_NOTE = { loop: "Ends where it starts.", "out-and-back": "Ride out and back the same way. Miles are round trip.", "point-to-point": "One way. Plan a shuttle or a second car." };
+  // Map line colors come from theme CSS vars; read them once per theme, not on every hover.
+  let colors;
+  const readColors = () => {
+    const css = getComputedStyle(document.documentElement);
+    const [route, rust, casing, ants] = ["--route", "--rust", "--casing", "--ants"].map((n) => css.getPropertyValue(n).trim());
+    colors = { route, rust, casing, ants };
+  };
+  readColors();
 
   // Month buttons
   const monthsEl = $("#months");
@@ -395,7 +410,7 @@
   const themeEl = $("#theme");
   const syncTheme = () => themeEl.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === window.atlasTheme.pref));
   themeEl.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) window.atlasTheme.set(b.dataset.v); });
-  document.addEventListener("atlas:theme", () => { syncTheme(); styleLines(); });
+  document.addEventListener("atlas:theme", () => { readColors(); syncTheme(); styleLines(); });
   syncTheme();
 
   // Map
@@ -407,12 +422,11 @@
       maxZoom: 15, subdomains: "abc", crossOrigin: true,
       attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, SRTM · Style © <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
     }).addTo(map);
-    const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
     ROUTES.forEach((r) => {
-      const casing = L.polyline(r.path, { color: cssVar("--casing"), weight: 9, opacity: .95, lineJoin: "round" });
-      const line = L.polyline(r.path, { color: cssVar("--route"), weight: 5, opacity: .95, lineJoin: "round" });
+      const casing = L.polyline(r.path, { color: colors.casing, weight: 9, opacity: .95, lineJoin: "round" });
+      const line = L.polyline(r.path, { color: colors.route, weight: 5, opacity: .95, lineJoin: "round" });
       const pin = L.marker(r.path[0], { icon: L.divIcon({ className: "", html: '<div class="start-pin"></div>', iconSize: [12, 12], iconAnchor: [6, 6] }), keyboard: false });
-      const ants = L.polyline(r.path, { color: cssVar("--ants"), weight: 2.5, opacity: 0, dashArray: "0.1 12", lineCap: "round", className: "ants", interactive: false });
+      const ants = L.polyline(r.path, { color: colors.ants, weight: 2.5, opacity: 0, dashArray: "0.1 12", lineCap: "round", className: "ants", interactive: false });
       const group = L.layerGroup([casing, line, ants, pin]);
       [line, casing, pin].forEach((l) => {
         l.on("click", () => select(r.id, true, true));
@@ -498,13 +512,11 @@
   function styleLines(hoverId) {
     if (offline) offline.update({ selected, hover: hoverId || null });
     if (!map) return;
-    const css = getComputedStyle(document.documentElement);
-    const [base, rust, casing, ants] = ["--route", "--rust", "--casing", "--ants"].map((n) => css.getPropertyValue(n).trim());
     ROUTES.forEach((r) => {
       const l = layers[r.id]; const on = r.id === selected || r.id === hoverId;
-      l.line.setStyle({ color: on ? rust : base, weight: on ? 6 : 5, opacity: selected && !on ? .5 : .95 });
-      l.casing.setStyle({ color: casing, weight: on ? 11 : 9 });
-      l.ants.setStyle({ color: ants, opacity: r.id === selected ? 1 : 0 });
+      l.line.setStyle({ color: on ? colors.rust : colors.route, weight: on ? 6 : 5, opacity: selected && !on ? .5 : .95 });
+      l.casing.setStyle({ color: colors.casing, weight: on ? 11 : 9 });
+      l.ants.setStyle({ color: colors.ants, opacity: r.id === selected ? 1 : 0 });
       if (on) { l.casing.bringToFront(); l.line.bringToFront(); l.ants.bringToFront(); }
       const pinEl = l.pin.getElement && l.pin.getElement();
       if (pinEl) pinEl.firstChild.classList.toggle("on", on);
