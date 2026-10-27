@@ -2,7 +2,9 @@
 
 A map-first website for planning gravel rides in Oregon and Washington. It's a single static HTML page with no build step and nothing to install. Routes come from the sample data in [`data/routes.js`](data/routes.js).
 
-Filter routes on a topo map by month, state, distance, climbing, gravel %, and drive time from Portland or Seattle. Hit **Surprise me** to spin the compass to a random match. Each route is labeled as a loop, out-and-back, or point-to-point. Pick a route to fly the map to it and open a details drawer with an elevation profile, surface, water, pass, and season info. The drawer also shows a fun-type rating (Chill to Legendary), a post-ride reward, and a badge to earn, plus a button to copy a ride brief.
+Filter routes on a topo map by month, state, distance, climbing, gravel %, and drive time from Portland or Seattle. Hit **Surprise me** to spin the compass to a random match. Each route is labeled as a loop, out-and-back, or point-to-point. Pick a route to fly the map to it and open a details drawer with an elevation profile, surface, water, pass, and season info. The drawer also shows a fun-type rating (Chill to Legendary), a post-ride reward, and a badge to earn, plus buttons to copy a ride brief or a link.
+
+The URL tracks the selected route and any filters you've changed, for example `?route=iron-horse&month=10&origin=sea`. Paste it in the club chat, and opening it brings back the same route and filters. If the linked route doesn't match the filters (say, it's out of season), Atlas loosens them so the route still shows. Link previews use [`variants/atlas/og-image.png`](variants/atlas/og-image.png).
 
 > **Sample data.** The 12 routes are realistic PNW gravel rides, but the geometry, mileage, climbing, drive times, and seasons are approximate. Don't navigate by them. Check closures, fire restrictions, and pass requirements with the land manager before you ride.
 
