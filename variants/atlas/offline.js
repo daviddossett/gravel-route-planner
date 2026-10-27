@@ -74,7 +74,10 @@
       s -= padLat; n += padLat; wst -= padLon; e += padLon;
       const pad = { t: 52, r: 28, l: 28, b: 28 };
       const drawer = document.getElementById("drawer");
-      if (sel && drawer) {
+      if (sel && drawer && matchMedia("(min-width: 1100px)").matches) {
+        // Laptop: the drawer is docked on the left of the map.
+        pad.l = Math.min(drawer.offsetLeft + drawer.offsetWidth + 24, w * .6);
+      } else if (sel && drawer) {
         // Keep the route clear of the details drawer (measured without its slide-in transform).
         const fixed = getComputedStyle(drawer).position === "fixed";
         const box = el.getBoundingClientRect();

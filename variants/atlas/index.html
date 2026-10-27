@@ -127,7 +127,7 @@
   .field { display: grid; gap: 6px; }
   .field-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 600; }
   .field-head output { font-family: var(--mono); font-weight: 500; font-size: 12px; color: var(--ink-2); }
-  .months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; }
+  .months { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; min-height: 28px; }
   .months button, .seg button {
     font: 500 12px/1 var(--sans); padding: 7px 0; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
     cursor: pointer; transition: background .15s, color .15s, border-color .15s;
@@ -234,6 +234,33 @@
   @media (max-width: 1100px) {
     .drawer { grid-template-columns: 1fr; max-height: 70%; overflow-y: auto; }
     .drawer .info { border-right: 0; border-bottom: 1px solid var(--line); }
+  }
+  /* Laptop: compact filters, let the list scroll the whole panel, dock details beside the map. */
+  @media (min-width: 1100px) {
+    .panel { overflow-y: auto; }
+    .masthead { padding: 16px 22px 12px; }
+    .masthead p { margin-top: 4px; }
+    .filters { padding: 12px 22px 14px; gap: 10px; }
+    .field { gap: 4px; }
+    .field:has(> .seg) { grid-template-columns: auto 1fr; align-items: center; gap: 14px; }
+    .months { min-height: 24px; }
+    .months button, .seg button { padding: 5px 0; }
+    .list-head { position: sticky; top: 0; z-index: 1; background: var(--paper); padding: 8px 22px; }
+    .list { flex: none; overflow: visible; }
+    .route { padding: 10px 22px; scroll-margin: 44px 0 64px; }
+    .disclaimer { position: sticky; bottom: 0; margin: auto 0 0; }
+
+    .stage { overflow: hidden; }
+    .drawer {
+      top: 16px; bottom: auto; right: auto; width: clamp(320px, 36%, 400px); max-height: calc(100% - 32px); overflow-y: auto;
+      grid-template-columns: 1fr; transform: translateX(calc(-100% - 24px));
+    }
+    .drawer.open { transform: none; }
+    .drawer .info { border-right: 0; border-bottom: 1px solid var(--line); }
+    .drawer h2 { padding-right: 28px; }
+    .drawer .detail { grid-template-columns: 1fr; gap: 10px; }
+    .stats { gap: 4px 14px; }
+    .stage:has(.drawer.open) .net-status { left: calc(clamp(320px, 36%, 400px) + 28px); max-width: calc(100% - clamp(320px, 36%, 400px) - 96px); }
   }
   @media (max-width: 760px) {
     .app { grid-template-columns: 1fr; grid-template-rows: 46vh 1fr; height: auto; min-height: 100vh; }
@@ -515,14 +542,21 @@
 
   function flyToRoute(r) {
     if (!map) return;
-    const isMobile = matchMedia("(max-width: 760px)").matches;
-    const bounds = L.latLngBounds(r.path), opts = { paddingTopLeft: [40, 40], paddingBottomRight: [40, isMobile ? 40 : 300], maxZoom: 11 };
+    const bounds = L.latLngBounds(r.path), opts = { ...routePadding(), maxZoom: 11 };
     if (reduceMotion()) map.fitBounds(bounds, { ...opts, animate: false });
     else map.flyToBounds(bounds, { ...opts, duration: .8 });
   }
 
+  // Keep the selected route clear of the details drawer, using its real size.
+  function routePadding() {
+    if (matchMedia("(max-width: 760px)").matches) return { paddingTopLeft: [40, 40], paddingBottomRight: [40, 40] };
+    const d = $("#drawer");
+    if (matchMedia("(min-width: 1100px)").matches) return { paddingTopLeft: [d.offsetLeft + d.offsetWidth + 40, 40], paddingBottomRight: [40, 40] };
+    return { paddingTopLeft: [40, 40], paddingBottomRight: [40, $("#map").offsetHeight - d.offsetTop + 24] };
+  }
+
   function profileSVG(r) {
-    const W = 640, H = 96, P = { l: 40, r: 6, t: 8, b: 18 };
+    const W = matchMedia("(min-width: 1100px)").matches ? 320 : 640, H = 96, P = { l: 40, r: 6, t: 8, b: 18 };
     const lo = Math.min(...r.profile), hi = Math.max(...r.profile);
     const pad = Math.max(200, (hi - lo) * .1);
     const y0 = Math.max(0, lo - pad), y1 = hi + pad;
@@ -686,7 +720,7 @@
     select(linked, true);
   }
   const first = ROUTES.filter(matches)[0];
-  if (!linked && new URLSearchParams(location.search).has("demo") && first) select(first.id, false);
+  if (!linked && new URLSearchParams(location.search).has("demo") && first) select(first.id, true);
 })();
 </script>
 </body>
