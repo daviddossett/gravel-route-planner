@@ -87,3 +87,19 @@ test("route list still renders offline after the first visit", async ({ page, co
 
   expect(errors, "page and console errors").toEqual([]);
 });
+
+test("empty state keeps the listbox free of non-option children and reset works", async ({ page }) => {
+  await page.goto(PAGE);
+  await expect(page.locator("#list .route").first()).toBeVisible();
+
+  await page.locator("#dist").fill("25");
+  await page.locator("#gain").fill("1500");
+  await page.locator("#grav").fill("100");
+  await expect(page.locator("#empty")).toBeVisible();
+  expect(await page.locator("#list").getAttribute("role")).toBe("listbox");
+  expect(await page.locator("#list > :not([role=option])").count()).toBe(0);
+
+  await page.locator("#reset2").click();
+  await expect(page.locator("#empty")).toBeHidden();
+  await expect(page.locator("#list .route").first()).toBeVisible();
+});
