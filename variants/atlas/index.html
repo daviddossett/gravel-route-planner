@@ -165,7 +165,7 @@
   .fun.f4, .fun.f5 { color: var(--fun-hard); background: var(--fun-hard-bg); }
   .route .nums { grid-row: 1 / span 2; grid-column: 2; text-align: right; font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--ink-2); }
   .route .nums b { color: var(--ink); font-weight: 500; }
-  .empty { padding: 28px 22px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+  .empty { flex: 1; padding: 28px 22px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
   .empty button { font: inherit; color: var(--forest); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
   .disclaimer { padding: 10px 22px 12px; font-size: 12px; line-height: 1.4; color: var(--ink-2); border-top: 1px solid var(--line); background: var(--paper-2); }
 
@@ -342,6 +342,7 @@
 
     <div class="list-head"><span id="count" aria-live="polite"></span><button id="reset">Reset filters</button></div>
     <div class="list" id="list" role="listbox" aria-label="Matching routes"></div>
+    <div class="empty" id="empty" hidden>Nothing out there fits all of that. Even the cows are confused. Try another month or <button type="button" id="reset2">reset filters</button>.</div>
     <p class="disclaimer">Sample data. Lines and stats are approximate — confirm closures, passes, and fire restrictions with the land manager before you ride.</p>
   </aside>
 
@@ -405,6 +406,7 @@
   ["dist", "gain", "grav", "drive"].forEach((k) => $("#" + k).addEventListener("input", (e) => { f[k] = +e.target.value; render(); }));
   const resetFilters = () => { Object.assign(f, defaults); saveOrigin(); render(); };
   $("#reset").addEventListener("click", resetFilters);
+  $("#reset2").addEventListener("click", resetFilters);
 
   // Theme picker
   const themeEl = $("#theme");
@@ -472,10 +474,8 @@
     const hadFocus = list.contains(document.activeElement);
     if (!shown.some((r) => r.id === active)) active = shown.some((r) => r.id === selected) ? selected : shown[0] ? shown[0].id : null;
     list.innerHTML = "";
-    if (!shown.length) {
-      list.innerHTML = `<div class="empty">Nothing out there fits all of that. Even the cows are confused. Try another month or <button type="button" id="reset2">reset filters</button>.</div>`;
-      $("#reset2").onclick = resetFilters;
-    }
+    list.hidden = !shown.length;
+    $("#empty").hidden = !!shown.length;
     shown.forEach((r) => {
       const el = document.createElement("div");
       el.className = "route"; el.tabIndex = r.id === active ? 0 : -1; el.setAttribute("role", "option"); el.dataset.id = r.id;
