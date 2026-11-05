@@ -156,8 +156,8 @@
   .route { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 22px; border-bottom: 1px solid var(--line); cursor: pointer; background: transparent; transition: background .15s; }
   .route:hover { background: var(--paper-2); }
   .route[aria-selected="true"] { background: var(--selected); }
-  .route[aria-selected="true"] h3 { color: var(--rust); }
-  .route h3 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.2; }
+  .route[aria-selected="true"] h2 { color: var(--rust); }
+  .route h2 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.2; }
   .route .where { grid-column: 1; font-size: 13px; color: var(--ink-2); }
   .fun { display: inline-block; font: 700 11px/1 var(--sans); letter-spacing: .02em; padding: 3px 7px 3px; border-radius: 999px; vertical-align: 1px; margin-left: 4px; border: 1px solid currentColor; }
   .fun.f1, .fun.f2 { color: var(--fun-easy); background: var(--fun-easy-bg); }
@@ -220,7 +220,7 @@
   .detail dt { color: var(--ink-2); }
   .detail dd { margin: 0; }
   .detail ul { margin: 0; padding-left: 16px; font-size: 13px; line-height: 1.5; }
-  .detail h4 { margin: 4px 0 2px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
+  .detail h3 { margin: 4px 0 2px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
   .close { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border: 0; background: transparent; font-size: 20px; color: var(--ink-2); cursor: pointer; border-radius: 4px; }
   .close:hover { background: var(--paper-2); color: var(--ink); }
   .toast { position: absolute; top: 16px; left: 50%; transform: translate(-50%, -8px); opacity: 0; z-index: 600; background: var(--ink); color: var(--paper); font-size: 13px; padding: 8px 14px; border-radius: 4px; transition: opacity .2s, transform .2s; pointer-events: none; }
@@ -481,7 +481,7 @@
       el.className = "route"; el.tabIndex = r.id === active ? 0 : -1; el.setAttribute("role", "option"); el.dataset.id = r.id;
       el.setAttribute("aria-selected", r.id === selected);
       const d = driveFrom(r);
-      el.innerHTML = `<h3>${r.name}</h3>
+      el.innerHTML = `<h2>${r.name}</h2>
         <div class="nums"><b>${r.miles}</b> mi · <b>${fmt(r.gain)}</b> ft<br>${r.gravel}% gravel<br>${d.h}h from ${d.from.toUpperCase()}</div>
         <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span></div>`;
       el.addEventListener("click", () => select(r.id, true, true));
@@ -624,8 +624,8 @@
           <dt>Reward</dt><dd>${r.stop}</dd>
         </dl>
         <div>
-          <h4>Why go</h4><ul>${r.highlights.map((h) => `<li>${h}</li>`).join("")}</ul>
-          <h4>Watch for</h4><ul>${r.cautions.map((h) => `<li>${h}</li>`).join("")}</ul>
+          <h3>Why go</h3><ul>${r.highlights.map((h) => `<li>${h}</li>`).join("")}</ul>
+          <h3>Watch for</h3><ul>${r.cautions.map((h) => `<li>${h}</li>`).join("")}</ul>
         </div>
       </div>`;
     d.classList.add("open"); d.inert = false;
