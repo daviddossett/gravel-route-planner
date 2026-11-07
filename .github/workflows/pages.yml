@@ -1,33 +1,50 @@
 name: Deploy to GitHub Pages
 
+# Deploys main to the site root and every open pull request from this repo to
+# pr-<number>/. Each run rebuilds the whole site, so a closed PR's preview is
+# gone after the next deploy.
+#
+# PR events use pull_request_target so the run uses main's workflow and scripts,
+# has a token that can comment, and passes the github-pages environment's
+# main-only branch rule. PR files are only copied into the site, never run.
 on:
   push:
     branches: [main]
+  pull_request_target:
+    types: [opened, reopened, synchronize, closed]
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  pull-requests: write
 
+# Don't cancel a deploy in progress; queued runs still collapse to the latest one,
+# which rebuilds everything.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    # Fork PRs don't get previews, so their events don't need a redeploy.
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
+      # On pull_request_target this checks out main, not the PR.
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
-      - name: Assemble static site
-        run: |
-          mkdir _site
-          cp -r index.html data variants vendor _site/
+      - name: Assemble site and PR previews
+        run: scripts/build-pages.sh _site > "$RUNNER_TEMP/previews"
 
       - uses: actions/configure-pages@v5
 
@@ -37,3 +54,9 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Comment preview links
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+          CLOSED_PR: ${{ github.event.action == 'closed' && github.event.pull_request.number || '' }}
+        run: scripts/comment-previews.sh "$PAGE_URL" "$RUNNER_TEMP/previews" "$CLOSED_PR"
