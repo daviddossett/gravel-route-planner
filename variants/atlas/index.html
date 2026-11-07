@@ -170,6 +170,7 @@
   .disclaimer { padding: 10px 22px 12px; font-size: 12px; line-height: 1.4; color: var(--ink-2); border-top: 1px solid var(--line); background: var(--paper-2); }
 
   .stage { position: relative; min-width: 0; }
+  .preview-banner { flex: none; padding: 12px 22px; background: #d6249f; color: #fff; font-weight: 700; font-size: 18px; letter-spacing: 0.02em; text-align: center; }
   #map { position: absolute; inset: 0; background: var(--map-bg); }
   #map .leaflet-tile-pane { filter: var(--tile-filter); }
   .map-fallback { position: absolute; inset: 0; display: none; place-items: center; text-align: center; padding: 40px; color: var(--ink-2); }
@@ -292,6 +293,7 @@
 <body>
 <div class="app">
   <aside class="panel" aria-label="Route filters and list">
+    <div class="preview-banner" role="note">Preview deploy test</div>
     <header class="masthead">
       <h1>Gravel Atlas</h1>
       <button class="spin" id="spin" type="button" title="Pick a random route from the ones that match">
