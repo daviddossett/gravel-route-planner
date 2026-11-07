@@ -446,7 +446,7 @@
     if (f.month && !r.months.includes(f.month)) return false;
     if (f.state !== "all" && r.state !== f.state) return false;
     if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav) return false;
-    return driveFrom(r).h <= f.drive;
+    return f.drive >= 7 || driveFrom(r).h <= f.drive; // 7 h = "any"
   }
 
   // Drive hours from the chosen city; for "any", the shorter drive and which city it's from.
