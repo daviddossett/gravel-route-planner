@@ -354,11 +354,11 @@
   </main>
 </div>
 
-<script src="../../vendor/leaflet-1.9.4/leaflet.js"></script>
-<script src="../../data/routes.js"></script>
-<script src="offline.js"></script>
+<script defer src="../../vendor/leaflet-1.9.4/leaflet.js"></script>
+<script defer src="../../data/routes.js"></script>
+<script defer src="offline.js"></script>
 <script>
-(() => {
+addEventListener("DOMContentLoaded", () => {
   const ROUTES = window.PNW_ROUTES;
   const MONTHS = ["J","F","M","A","M","J","J","A","S","O","N","D"];
   const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -737,7 +737,7 @@
   }
   const first = ROUTES.filter(matches)[0];
   if (!linked && new URLSearchParams(location.search).has("demo") && first) select(first.id, true);
-})();
+});
 </script>
 </body>
 </html>
