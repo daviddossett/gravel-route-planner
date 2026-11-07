@@ -50,12 +50,20 @@ npm test
 
 CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the route data check and the smoke tests on every pull request and on pushes to `main`.
 
+## Deploys and PR previews
+
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) deploys to GitHub Pages on every push to `main`, and whenever a pull request from this repo is opened, updated, reopened, or closed. `main` is served at https://daviddossett.github.io/gravel-route-planner/, and each open pull request at `https://daviddossett.github.io/gravel-route-planner/pr-<number>/variants/atlas/`. The workflow posts that link as a comment on the pull request and keeps it current.
+
+Every deploy rebuilds the whole site with [`scripts/build-pages.sh`](scripts/build-pages.sh), so a closed pull request's preview disappears on the next deploy. Pull requests from forks don't get previews. The workflow runs from `main`, so changes to it or to the scripts take effect only after they merge.
+
 ## Layout
 
 ```
-data/routes.js           sample route data (window.PNW_ROUTES)
-scripts/check-routes.js  route data checker
-tests/                   Playwright smoke tests (dev only)
-variants/atlas/          map-first planner (Leaflet + OpenTopoMap)
-vendor/                  self-hosted Leaflet 1.9.4 and IBM Plex fonts, with licenses
+data/routes.js               sample route data (window.PNW_ROUTES)
+scripts/check-routes.js      route data checker
+scripts/build-pages.sh       assembles the Pages site and PR previews
+scripts/comment-previews.sh  posts preview links on pull requests
+tests/                       Playwright smoke tests (dev only)
+variants/atlas/              map-first planner (Leaflet + OpenTopoMap)
+vendor/                      self-hosted Leaflet 1.9.4 and IBM Plex fonts, with licenses
 ```
