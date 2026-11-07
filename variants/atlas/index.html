@@ -47,7 +47,7 @@
 <meta name="twitter:image:alt" content="Gravel Atlas: a topo map of Pacific Northwest gravel routes beside a filterable route list">
 <script>
   // Font preloads are CORS requests, which file:// pages can't make (WebKit then skips the font entirely).
-  if (location.protocol !== "file:") document.head.append(Object.assign(document.createElement("link"), { rel: "preload", href: "../../vendor/fonts/ibm-plex/ibm-plex-sans-condensed-400-latin.woff2", as: "font", type: "font/woff2", crossOrigin: "" }));
+  if (location.protocol !== "file:") ["sans-condensed-400", "sans-condensed-500", "sans-condensed-600", "sans-condensed-700", "mono-400", "mono-500"].forEach((w) => document.head.append(Object.assign(document.createElement("link"), { rel: "preload", href: `../../vendor/fonts/ibm-plex/ibm-plex-${w}-latin.woff2`, as: "font", type: "font/woff2", crossOrigin: "" })));
 </script>
 <link rel="stylesheet" href="../../vendor/leaflet-1.9.4/leaflet.css">
 <style>
@@ -404,7 +404,7 @@
   bindSeg($("#state"), "state"); bindSeg($("#origin"), "origin");
   $("#origin").addEventListener("click", saveOrigin);
   ["dist", "gain", "grav", "drive"].forEach((k) => $("#" + k).addEventListener("input", (e) => { f[k] = +e.target.value; render(); }));
-  const resetFilters = () => { Object.assign(f, defaults); saveOrigin(); render(); };
+  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); saveOrigin(); render(); };
   $("#reset").addEventListener("click", resetFilters);
   $("#reset2").addEventListener("click", resetFilters);
 
