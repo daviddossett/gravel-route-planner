@@ -67,3 +67,5 @@ tests/                       Playwright smoke tests (dev only)
 variants/atlas/              map-first planner (Leaflet + OpenTopoMap)
 vendor/                      self-hosted Leaflet 1.9.4 and IBM Plex fonts, with licenses
 ```
+
+This line was added to test the pull request workflow.
