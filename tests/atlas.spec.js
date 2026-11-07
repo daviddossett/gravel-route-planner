@@ -102,4 +102,5 @@ test("empty state keeps the listbox free of non-option children and reset works"
   await page.locator("#reset2").click();
   await expect(page.locator("#empty")).toBeHidden();
   await expect(page.locator("#list .route").first()).toBeVisible();
+  await expect(page.locator("#count")).toHaveText(/^(\d+) of \1 routes$/);
 });
