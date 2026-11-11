@@ -152,6 +152,8 @@
 
   .list-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 22px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--line); }
   .list-head button { font: 500 13px var(--sans); background: none; border: 0; color: var(--forest); cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+  .list-head .sort { display: flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 14px; }
+  .list-head select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
   .list { overflow-y: auto; flex: 1; min-height: 0; }
   .route { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 22px; border-bottom: 1px solid var(--line); cursor: pointer; background: transparent; transition: background .15s; }
   .route:hover { background: var(--paper-2); }
@@ -340,7 +342,15 @@
       </div>
     </section>
 
-    <div class="list-head"><span id="count" aria-live="polite"></span><button id="reset">Reset filters</button></div>
+    <div class="list-head"><span id="count" aria-live="polite"></span>
+      <label class="sort">Sort <select id="sort">
+        <option value="drive">Closest drive</option>
+        <option value="miles">Shortest distance</option>
+        <option value="gain">Least climbing</option>
+        <option value="fun">Chillest first</option>
+        <option value="fun-desc">Spiciest first</option>
+      </select></label>
+      <button id="reset">Reset filters</button></div>
     <div class="list" id="list" role="listbox" aria-label="Matching routes"></div>
     <div class="empty" id="empty" hidden>Nothing out there fits all of that. Even the cows are confused. Try another month or <button type="button" id="reset2">reset filters</button>.</div>
     <p class="disclaimer">Sample data. Lines and stats are approximate — confirm closures, passes, and fire restrictions with the land manager before you ride.</p>
@@ -404,6 +414,15 @@ addEventListener("DOMContentLoaded", () => {
   bindSeg($("#state"), "state"); bindSeg($("#origin"), "origin");
   $("#origin").addEventListener("click", saveOrigin);
   ["dist", "gain", "grav", "drive"].forEach((k) => $("#" + k).addEventListener("input", (e) => { f[k] = +e.target.value; render(); }));
+  const SORTS = {
+    drive: (a, b) => driveFrom(a).h - driveFrom(b).h,
+    miles: (a, b) => a.miles - b.miles || driveFrom(a).h - driveFrom(b).h,
+    gain: (a, b) => a.gain - b.gain || driveFrom(a).h - driveFrom(b).h,
+    fun: (a, b) => a.difficulty - b.difficulty || driveFrom(a).h - driveFrom(b).h,
+    "fun-desc": (a, b) => b.difficulty - a.difficulty || driveFrom(a).h - driveFrom(b).h,
+  };
+  let sortKey = "drive";
+  $("#sort").addEventListener("change", (e) => { sortKey = e.target.value; render(); });
   const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); saveOrigin(); render(); };
   $("#reset").addEventListener("click", resetFilters);
   $("#reset2").addEventListener("click", resetFilters);
@@ -467,7 +486,7 @@ addEventListener("DOMContentLoaded", () => {
     $("#grav-out").textContent = `${f.grav}%`;
     $("#drive-out").textContent = f.drive >= 7 ? "any" : `≤ ${f.drive} h`;
 
-    const shown = ROUTES.filter(matches).sort((a, b) => driveFrom(a).h - driveFrom(b).h);
+    const shown = ROUTES.filter(matches).sort(SORTS[sortKey]);
     $("#count").textContent = `${shown.length} of ${ROUTES.length} routes`;
 
     const list = $("#list");

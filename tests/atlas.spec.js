@@ -104,3 +104,17 @@ test("empty state keeps the listbox free of non-option children and reset works"
   await expect(page.locator("#list .route").first()).toBeVisible();
   await expect(page.locator("#count")).toHaveText(/^(\d+) of \1 routes$/);
 });
+
+test("sort control reorders the route list", async ({ page }) => {
+  await page.goto(PAGE);
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  const miles = async () => page.locator("#list .route .nums b:first-child").allTextContents().then((a) => a.map(Number));
+
+  await page.locator("#sort").selectOption("miles");
+  const byMiles = await miles();
+  expect(byMiles.length).toBeGreaterThan(1);
+  expect(byMiles).toEqual([...byMiles].sort((a, b) => a - b));
+
+  await page.locator("#sort").selectOption("drive");
+  expect(await miles()).not.toEqual(byMiles);
+});
