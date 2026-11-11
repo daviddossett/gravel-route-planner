@@ -24,6 +24,12 @@ function watchErrors(page) {
   return errors;
 }
 
+// On phones the route list is an overlay behind the "Routes" button.
+async function openList(page) {
+  const toggle = page.locator("#panel-toggle");
+  if (await toggle.isVisible() && (await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: FIXED_DATE });
 });
@@ -32,7 +38,7 @@ test("demo loads with routes, a visible drawer, and Esc closes it", async ({ pag
   const errors = watchErrors(page);
   await page.goto(`${PAGE}?demo`);
 
-  await expect(page.locator("#list .route").first()).toBeVisible();
+  await expect(page.locator("#list .route").first()).toBeAttached();
 
   const drawer = page.locator("#drawer");
   await expect(drawer).toHaveClass(/\bopen\b/);
@@ -64,6 +70,7 @@ test("demo loads with routes, a visible drawer, and Esc closes it", async ({ pag
 test("route list still renders offline after the first visit", async ({ page, context }) => {
   const errors = watchErrors(page);
   await page.goto(PAGE);
+  await openList(page);
   await expect(page.locator("#list .route").first()).toBeVisible();
 
   // Wait until the service worker controls the page and has saved the route data.
@@ -79,6 +86,7 @@ test("route list still renders offline after the first visit", async ({ page, co
     expect(reachable, "uncached files should fail to load while offline").toBe(false);
 
     await page.reload();
+    await openList(page);
     await expect(page.locator("#list .route").first()).toBeVisible();
     await expect(page.locator("#net-status")).toContainText("Offline");
   } finally {
@@ -90,6 +98,7 @@ test("route list still renders offline after the first visit", async ({ page, co
 
 test("empty state keeps the listbox free of non-option children and reset works", async ({ page }) => {
   await page.goto(PAGE);
+  await openList(page);
   await expect(page.locator("#list .route").first()).toBeVisible();
 
   await page.locator("#dist").fill("25");
@@ -107,6 +116,7 @@ test("empty state keeps the listbox free of non-option children and reset works"
 
 test("sort control reorders the route list", async ({ page }) => {
   await page.goto(PAGE);
+  await openList(page);
   await expect(page.locator("#list .route").first()).toBeVisible();
   const miles = async () => page.locator("#list .route .nums b:first-child").allTextContents().then((a) => a.map(Number));
 
@@ -117,4 +127,21 @@ test("sort control reorders the route list", async ({ page }) => {
 
   await page.locator("#sort").selectOption("drive");
   expect(await miles()).not.toEqual(byMiles);
+});
+
+test("on phones the route list is a toggleable overlay over a full-height map", async ({ page }) => {
+  test.skip(!(page.viewportSize() && page.viewportSize().width <= 760), "phone layout only");
+  await page.goto(PAGE);
+  const toggle = page.locator("#panel-toggle");
+  await expect(page.locator("#list")).toBeHidden();
+  const mapBox = await page.locator("#map").boundingBox();
+  expect(mapBox.height).toBeGreaterThan(page.viewportSize().height - 2);
+
+  await toggle.click();
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+  await page.locator("#list .route").first().click();
+  await expect(page.locator("#list")).toBeHidden();
+  await expect(page.locator("#drawer")).toHaveClass(/\bopen\b/);
 });

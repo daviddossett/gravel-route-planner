@@ -172,6 +172,7 @@
   .disclaimer { padding: 10px 22px 12px; font-size: 12px; line-height: 1.4; color: var(--ink-2); border-top: 1px solid var(--line); background: var(--paper-2); }
 
   .stage { position: relative; min-width: 0; }
+  .panel-toggle { display: none; }
   #map { position: absolute; inset: 0; background: var(--map-bg); }
   #map .leaflet-tile-pane { filter: var(--tile-filter); }
   .map-fallback { position: absolute; inset: 0; display: none; place-items: center; text-align: center; padding: 40px; color: var(--ink-2); }
@@ -272,14 +273,17 @@
     .stage:has(.drawer.open) .net-status { left: calc(clamp(320px, 36%, 400px) + 28px); max-width: calc(100% - clamp(320px, 36%, 400px) - 96px); }
   }
   @media (max-width: 760px) {
-    .app { grid-template-columns: 1fr; grid-template-rows: 46vh 1fr; height: auto; min-height: 100vh; }
-    /* Above .panel so the pinned map and the fixed route sheet (inside .stage) aren't painted over by the list. */
-    .stage { grid-row: 1; position: sticky; top: 0; height: 46vh; z-index: 3; }
-    .panel { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); }
+    .app { grid-template-columns: 1fr; height: 100vh; height: 100dvh; }
+    .stage { z-index: 1; }
+    /* The list is an overlay over the full-height map, toggled by the Routes button. */
+    .panel { position: fixed; inset: 0; z-index: 5; border-right: 0; overflow-y: auto; overscroll-behavior: contain; padding-top: 56px; visibility: hidden; transform: translateY(12px); opacity: 0; transition: opacity .18s, transform .18s, visibility 0s .18s; }
+    .app.panel-open .panel { visibility: visible; transform: none; opacity: 1; transition: opacity .18s, transform .18s; }
     .list { overflow: visible; }
+    .panel-toggle { display: block; position: fixed; top: 12px; left: 12px; z-index: 6; min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); font: 600 14px/1 var(--sans); box-shadow: 0 2px 8px rgba(24, 32, 27, .25); cursor: pointer; }
+    .net-status { top: 60px; }
     .drawer {
       position: fixed; left: 8px; right: 8px; bottom: 8px;
-      max-height: calc(54vh - 16px); max-height: calc(100dvh - 46vh - 16px);
+      max-height: calc(60vh - 16px); max-height: calc(60dvh - 16px);
       display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain;
     }
     .drawer .info, .drawer .detail { flex: none; }
@@ -293,7 +297,7 @@
 </head>
 <body>
 <div class="app">
-  <aside class="panel" aria-label="Route filters and list">
+  <aside class="panel" id="panel" aria-label="Route filters and list">
     <header class="masthead">
       <h1>Gravel Atlas</h1>
       <button class="spin" id="spin" type="button" title="Pick a random route from the ones that match">
@@ -360,6 +364,7 @@
     <div id="map" role="region" aria-label="Map of routes"></div>
     <div class="map-fallback" id="fallback">The map needs an internet connection to load tiles. The route list still works.</div>
     <div class="toast" id="toast" role="status"></div>
+    <button class="panel-toggle" id="panel-toggle" type="button" aria-controls="panel" aria-expanded="false">Routes</button>
     <section class="drawer" id="drawer" aria-label="Selected route" inert></section>
   </main>
 </div>
@@ -561,8 +566,18 @@ addEventListener("DOMContentLoaded", () => {
     rows[Math.max(0, Math.min(rows.length - 1, next))].focus();
   });
 
+  const appEl = $(".app"), panelToggle = $("#panel-toggle");
+  function setPanel(open) {
+    appEl.classList.toggle("panel-open", open);
+    panelToggle.setAttribute("aria-expanded", open);
+    panelToggle.textContent = open ? "Show map" : "Routes";
+  }
+  panelToggle.addEventListener("click", () => setPanel(!appEl.classList.contains("panel-open")));
+  matchMedia("(max-width: 760px)").addEventListener("change", () => setPanel(false));
+
   function select(id, fly, moveFocus) {
     selected = id;
+    if (matchMedia("(max-width: 760px)").matches) setPanel(false);
     const r = ROUTES.find((x) => x.id === id);
     document.querySelectorAll(".route").forEach((el) => el.setAttribute("aria-selected", el.dataset.id === id));
     const row = document.querySelector(`.route[data-id="${id}"]`);
@@ -584,7 +599,10 @@ addEventListener("DOMContentLoaded", () => {
 
   // Keep the selected route clear of the details drawer, using its real size.
   function routePadding() {
-    if (matchMedia("(max-width: 760px)").matches) return { paddingTopLeft: [40, 40], paddingBottomRight: [40, 40] };
+    if (matchMedia("(max-width: 760px)").matches) {
+      const d = $("#drawer"), h = $("#map").offsetHeight;
+      return { paddingTopLeft: [40, 64], paddingBottomRight: [40, Math.min(d.offsetHeight + 24, h * .6)] };
+    }
     const d = $("#drawer");
     if (matchMedia("(min-width: 1100px)").matches) return { paddingTopLeft: [d.offsetLeft + d.offsetWidth + 40, 40], paddingBottomRight: [40, 40] };
     return { paddingTopLeft: [40, 40], paddingBottomRight: [40, $("#map").offsetHeight - d.offsetTop + 24] };
@@ -731,7 +749,9 @@ addEventListener("DOMContentLoaded", () => {
   }
   let tt; function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
   document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape" || !selected) return;
+    if (e.key !== "Escape") return;
+    if (appEl.classList.contains("panel-open")) { setPanel(false); panelToggle.focus(); return; }
+    if (!selected) return;
     const a = document.activeElement;
     closeDrawer($("#drawer").contains(a) || a === document.body);
   });
