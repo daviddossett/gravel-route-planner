@@ -138,3 +138,37 @@ test("IDE themes apply and set dark mode flag", async ({ page }) => {
     await expect(page.locator("html")).toHaveAttribute("data-dark", dark);
   }
 });
+
+test("route list is keyboard operable: arrows move focus, Enter opens the drawer, Esc returns focus", async ({ page }) => {
+  await page.goto(PAGE);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeVisible();
+  const last = rows.last();
+  const second = rows.nth(1);
+
+  // Roving tabindex: exactly one row is in the tab order.
+  await expect(page.locator('#list .route[tabindex="0"]')).toHaveCount(1);
+
+  await rows.first().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(second).toBeFocused();
+  await expect(second).toHaveAttribute("tabindex", "0");
+  await page.keyboard.press("End");
+  await expect(last).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(rows.first()).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(rows.first()).toBeFocused();
+
+  await page.keyboard.press("ArrowDown");
+  await expect(second).toBeFocused();
+  await page.keyboard.press("Enter");
+  const drawer = page.locator("#drawer");
+  await expect(drawer).toHaveClass(/\bopen\b/);
+  await expect(second).toHaveAttribute("aria-selected", "true");
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toHaveClass(/\bopen\b/);
+  await expect(second).toBeFocused();
+  await expect(second).toHaveAttribute("aria-selected", "false");
+});
