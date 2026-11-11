@@ -138,3 +138,30 @@ test("IDE themes apply and set dark mode flag", async ({ page }) => {
     await expect(page.locator("html")).toHaveAttribute("data-dark", dark);
   }
 });
+
+test("deep link opens the linked route with its filters, and the URL follows the selection", async ({ page }) => {
+  await page.goto(`${PAGE}?route=klickitat&month=any&origin=pdx&state=WA`);
+  const drawer = page.locator("#drawer");
+  await expect(drawer).toHaveClass(/\bopen\b/);
+  await expect(drawer.locator("h2")).toContainText("Klickitat Trail");
+  await expect(page.locator('#list .route[aria-selected="true"]')).toHaveCount(1);
+  await expect(page.locator('#state button[data-v="WA"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('#origin button[data-v="pdx"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#month-out")).toHaveText("Any month");
+
+  expect(new URL(page.url()).searchParams.get("route")).toBe("klickitat");
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toHaveClass(/\bopen\b/);
+  await expect.poll(() => new URL(page.url()).searchParams.has("route")).toBe(false);
+  expect(new URL(page.url()).searchParams.get("state")).toBe("WA");
+});
+
+test("deep link to a route hidden by the default filters loosens them and says so", async ({ page }) => {
+  // Klickitat is a WA route not ridden in January, so both month=1 and state=OR hide it.
+  await page.goto(`${PAGE}?route=klickitat&month=1&state=OR`);
+  await expect(page.locator("#toast")).toHaveText("Filters loosened to show the linked route");
+  await expect(page.locator("#drawer")).toHaveClass(/\bopen\b/);
+  await expect(page.locator("#drawer h2")).toContainText("Klickitat Trail");
+  await expect(page.locator('#state button[data-v="all"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#month-out")).toHaveText("Any month");
+});
