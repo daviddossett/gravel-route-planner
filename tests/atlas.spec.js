@@ -128,3 +128,13 @@ test("theme picker switches themes and remembers the choice", async ({ page }) =
   await expect(page.locator("#theme")).toHaveValue("midnight");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "midnight");
 });
+
+test("IDE themes apply and set dark mode flag", async ({ page }) => {
+  await page.clock.setFixedTime(FIXED_DATE);
+  await page.goto(`${PAGE}?demo`);
+  for (const [theme, dark] of [["dracula", "1"], ["solarizedlight", "0"], ["tokyonight", "1"]]) {
+    await page.locator("#theme").selectOption(theme);
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    await expect(page.locator("html")).toHaveAttribute("data-dark", dark);
+  }
+});

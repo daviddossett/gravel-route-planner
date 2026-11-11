@@ -9,7 +9,7 @@
 <script>
   // Resolve the theme before first paint so there's no flash.
   (() => {
-    const KEY = "atlas-theme", BAR = { light: "#f4f1ea", dark: "#161a17", midnight: "#0f1626", sunset: "#f6e6d3", contrast: "#000000" }, DARK = { dark: 1, midnight: 1, contrast: 1 };
+    const KEY = "atlas-theme", BAR = { light: "#f4f1ea", dark: "#161a17", midnight: "#0f1626", sunset: "#f6e6d3", contrast: "#000000", solarizedlight: "#fdf6e3", solarizeddark: "#002b36", dracula: "#282a36", nord: "#2e3440", monokai: "#272822", gruvbox: "#282828", tokyonight: "#1a1b26" }, DARK = { dark: 1, midnight: 1, contrast: 1, solarizeddark: 1, dracula: 1, nord: 1, monokai: 1, gruvbox: 1, tokyonight: 1 };
     const root = document.documentElement, mq = matchMedia("(prefers-color-scheme: dark)");
     let pref = "system";
     try { const v = localStorage.getItem(KEY); if (v in BAR) pref = v; } catch (e) {}
@@ -141,6 +141,90 @@
     --shadow: 0 0 0; --map-bg: #0a0a0a;
     --tile-filter: invert(.92) hue-rotate(180deg) saturate(0) brightness(.85) contrast(1.1);
     --casing: #000;
+    color-scheme: dark;
+  }
+  :root[data-theme="solarizedlight"] {
+    --paper: #fdf6e3; --paper-2: #eee8d5; --ink: #073642; --ink-2: #586e75; --line: #d9d2bd;
+    --forest: #5f6f00; --rust: #cb4b16; --route: #6c5a3a; --sky: #1f78b4;
+    --surface: #fffbf0; --selected: #fff; --on-sun: #073642; --compass-face: #fffbf0; --stamp: #073642;
+    --fun-easy: #5f6f00; --fun-easy-bg: #eef0c8;
+    --fun-mid: #8a6300; --fun-mid-bg: #f8e8b8;
+    --fun-hard: #b02a1a; --fun-hard-bg: #f6d9ca;
+    --shadow: 7 54 66; --map-bg: #eee8d5;
+    --tile-filter: sepia(.4) saturate(.5) brightness(1.03);
+    --casing: #fdf6e3;
+    color-scheme: light;
+  }
+  :root[data-theme="solarizeddark"] {
+    --paper: #002b36; --paper-2: #073642; --ink: #eee8d5; --ink-2: #93a1a1; --line: #1d4752;
+    --forest: #a1b43a; --rust: #e0643a; --route: #e8cf9a; --sky: #4aa3e0;
+    --surface: #05323d; --selected: #0b3f4c; --stamp: #eee8d5;
+    --fun-easy: #a1b43a; --fun-easy-bg: #1c3a22;
+    --fun-mid: #e0b84a; --fun-mid-bg: #3a3010;
+    --fun-hard: #ff8a70; --fun-hard-bg: #40221c;
+    --shadow: 0 0 0; --map-bg: #04323d;
+    --tile-filter: invert(.9) hue-rotate(160deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #00212a;
+    color-scheme: dark;
+  }
+  :root[data-theme="dracula"] {
+    --paper: #282a36; --paper-2: #343746; --ink: #f8f8f2; --ink-2: #b6b9d0; --line: #44475a;
+    --forest: #50fa7b; --rust: #ff7a59; --route: #f1fa8c; --sky: #8be9fd;
+    --surface: #2e303e; --selected: #3a3d50; --stamp: #f8f8f2;
+    --fun-easy: #50fa7b; --fun-easy-bg: #1f3a2c;
+    --fun-mid: #f1fa8c; --fun-mid-bg: #3b3d1f;
+    --fun-hard: #ff9580; --fun-hard-bg: #4a2630;
+    --shadow: 0 0 0; --map-bg: #2b2d3a;
+    --tile-filter: invert(.9) hue-rotate(220deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #1e1f29;
+    color-scheme: dark;
+  }
+  :root[data-theme="nord"] {
+    --paper: #2e3440; --paper-2: #3b4252; --ink: #eceff4; --ink-2: #b0b9ca; --line: #4c566a;
+    --forest: #a3be8c; --rust: #e0987f; --route: #ebcb8b; --sky: #88c0d0;
+    --surface: #333a47; --selected: #434c5e; --stamp: #eceff4;
+    --fun-easy: #a3be8c; --fun-easy-bg: #2f3f33;
+    --fun-mid: #ebcb8b; --fun-mid-bg: #453f2c;
+    --fun-hard: #e8a090; --fun-hard-bg: #4a3236;
+    --shadow: 0 0 0; --map-bg: #323845;
+    --tile-filter: invert(.9) hue-rotate(190deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #242933;
+    color-scheme: dark;
+  }
+  :root[data-theme="monokai"] {
+    --paper: #272822; --paper-2: #34352d; --ink: #f8f8f2; --ink-2: #b8b8a8; --line: #49483e;
+    --forest: #a6e22e; --rust: #ff7a3d; --route: #e6db74; --sky: #66d9ef;
+    --surface: #2d2e27; --selected: #3a3b32; --stamp: #f8f8f2;
+    --fun-easy: #a6e22e; --fun-easy-bg: #2f3a17;
+    --fun-mid: #e6db74; --fun-mid-bg: #3d3a17;
+    --fun-hard: #ff6b9a; --fun-hard-bg: #44202e;
+    --shadow: 0 0 0; --map-bg: #2a2b25;
+    --tile-filter: invert(.9) hue-rotate(180deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #1c1d19;
+    color-scheme: dark;
+  }
+  :root[data-theme="gruvbox"] {
+    --paper: #282828; --paper-2: #32302f; --ink: #ebdbb2; --ink-2: #bdae93; --line: #504945;
+    --forest: #b8bb26; --rust: #fe8019; --route: #fabd2f; --sky: #83a598;
+    --surface: #2e2c2b; --selected: #3c3836; --stamp: #ebdbb2;
+    --fun-easy: #b8bb26; --fun-easy-bg: #333512;
+    --fun-mid: #fabd2f; --fun-mid-bg: #3d3010;
+    --fun-hard: #ff7a62; --fun-hard-bg: #44201a;
+    --shadow: 0 0 0; --map-bg: #2b2a29;
+    --tile-filter: invert(.9) hue-rotate(170deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #1d2021;
+    color-scheme: dark;
+  }
+  :root[data-theme="tokyonight"] {
+    --paper: #1a1b26; --paper-2: #24283b; --ink: #c0caf5; --ink-2: #9aa5ce; --line: #343b58;
+    --forest: #9ece6a; --rust: #ff9e64; --route: #e0af68; --sky: #7aa2f7;
+    --surface: #1f2335; --selected: #292e42; --stamp: #c0caf5;
+    --fun-easy: #9ece6a; --fun-easy-bg: #243320;
+    --fun-mid: #e0af68; --fun-mid-bg: #3a2f1a;
+    --fun-hard: #f7768e; --fun-hard-bg: #402030;
+    --shadow: 0 0 0; --map-bg: #1d202f;
+    --tile-filter: invert(.9) hue-rotate(210deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #15161e;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -343,6 +427,13 @@
           <option value="dark">Dark</option>
           <option value="midnight">Midnight</option>
           <option value="sunset">Sunset</option>
+          <option value="solarizedlight">Solarized Light</option>
+          <option value="solarizeddark">Solarized Dark</option>
+          <option value="dracula">Dracula</option>
+          <option value="nord">Nord</option>
+          <option value="monokai">Monokai</option>
+          <option value="gruvbox">Gruvbox Dark</option>
+          <option value="tokyonight">Tokyo Night</option>
           <option value="contrast">High contrast</option>
         </select>
       </div>
