@@ -118,3 +118,13 @@ test("sort control reorders the route list", async ({ page }) => {
   await page.locator("#sort").selectOption("drive");
   expect(await miles()).not.toEqual(byMiles);
 });
+
+test("theme picker switches themes and remembers the choice", async ({ page }) => {
+  await page.clock.setFixedTime(FIXED_DATE);
+  await page.goto(`${PAGE}?demo`);
+  await page.locator("#theme").selectOption("midnight");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "midnight");
+  await page.reload();
+  await expect(page.locator("#theme")).toHaveValue("midnight");
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "midnight");
+});
