@@ -139,6 +139,45 @@ test("IDE themes apply and set dark mode flag", async ({ page }) => {
   }
 });
 
+test("state and month filters narrow the list and the count", async ({ page }) => {
+  await page.goto(PAGE);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeVisible();
+
+  await page.locator("#months button[aria-label=January]").click();
+  await expect(page.locator("#month-out")).toHaveText("January");
+  await expect(page.locator("#empty")).toBeVisible();
+
+  // Clicking the active month again clears it.
+  await page.locator("#months button[aria-label=January]").click();
+  await expect(page.locator("#month-out")).toHaveText("Any month");
+  await expect(rows.first()).toBeVisible();
+  const total = await rows.count();
+
+  await page.locator('#state button[data-v="WA"]').click();
+  await expect(page.locator('#state button[data-v="WA"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(rows.first()).toBeVisible();
+  await expect(rows.locator(".where", { hasText: ", OR" })).toHaveCount(0);
+  const wa = await rows.count();
+  expect(wa).toBeGreaterThan(0);
+  expect(wa).toBeLessThan(total);
+  await expect(page.locator("#count")).toHaveText(new RegExp(`^${wa} of \\d+ routes$`));
+});
+
+test("drive origin changes the listed drive times and is remembered", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  const nums = page.locator("#list .route .nums");
+  await expect(nums.first()).toContainText("from SEA");
+
+  await page.locator('#origin button[data-v="pdx"]').click();
+  await expect(nums.first()).toContainText("from PDX");
+  await expect(nums.filter({ hasText: "from SEA" })).toHaveCount(0);
+
+  await page.goto(`${PAGE}?month=any`);
+  await expect(page.locator('#origin button[data-v="pdx"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(nums.first()).toContainText("from PDX");
+});
+
 test("route list is keyboard operable: arrows move focus, Enter opens the drawer, Esc returns focus", async ({ page }) => {
   await page.goto(PAGE);
   const rows = page.locator("#list .route");
