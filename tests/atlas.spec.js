@@ -139,6 +139,32 @@ test("IDE themes apply and set dark mode flag", async ({ page }) => {
   }
 });
 
+test("saving a route keeps it across reloads and the Saved filter narrows the list", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeVisible();
+  const total = await rows.count();
+  await expect(page.locator("#saved-toggle")).toBeHidden();
+
+  const save = page.locator("#save");
+  await expect(save).toHaveAttribute("aria-pressed", "false");
+  await save.click();
+  await expect(save).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#list .saved-tag")).toHaveCount(1);
+
+  await page.reload();
+  const toggle = page.locator("#saved-toggle");
+  await expect(toggle).toHaveText("Saved (1)");
+  await page.keyboard.press("Escape"); // the phone sheet covers the list
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(rows).toHaveCount(1);
+
+  await page.locator("#reset").click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  expect(await rows.count()).toBeGreaterThan(total - 1);
+});
+
 test("state and month filters narrow the list and the count", async ({ page }) => {
   await page.goto(PAGE);
   const rows = page.locator("#list .route");

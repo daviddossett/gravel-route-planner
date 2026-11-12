@@ -269,9 +269,12 @@
   input[type=range] { width: 100%; height: 24px; accent-color: var(--forest); margin: 0; }
   button:focus-visible, input:focus-visible, .route:focus-visible { outline: 2px solid var(--rust); outline-offset: 2px; }
 
-  .list-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 22px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--line); }
+  .list-head { display: flex; flex-wrap: wrap; row-gap: 6px; justify-content: space-between; align-items: center; padding: 10px 22px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--line); }
   .list-head button { font: 500 13px var(--sans); background: none; border: 0; color: var(--forest); cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
   .list-head .sort { display: flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 14px; }
+  .list-head .saved-toggle { white-space: nowrap; margin-right: 10px; order: 1; text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; min-height: 28px; color: var(--ink); }
+  .list-head .saved-toggle[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .saved-tag { white-space: nowrap; font: 700 11px/1 var(--sans); letter-spacing: .02em; color: var(--forest); margin-left: 4px; }
   .list-head select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
   .list { overflow-y: auto; flex: 1; min-height: 0; }
   .route { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 22px; border-bottom: 1px solid var(--line); cursor: pointer; background: transparent; transition: background .15s; }
@@ -335,6 +338,7 @@
   .ride-time .est b { font-family: var(--mono); font-weight: 500; color: var(--ink); }
   .btn { font: 600 13px var(--sans); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--ink); }
+  .btn[aria-pressed="true"] { border-color: var(--forest); color: var(--forest); }
   .btn:hover { background: var(--forest); border-color: var(--forest); color: var(--paper); }
   .drawer .detail { padding: 16px 20px 18px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 6px 28px; min-width: 0; }
   .profile { grid-column: 1 / -1; }
@@ -476,6 +480,7 @@
     </section>
 
     <div class="list-head"><span id="count" aria-live="polite"></span>
+      <button type="button" class="saved-toggle" id="saved-toggle" aria-pressed="false" hidden></button>
       <label class="sort">Sort <select id="sort">
         <option value="drive">Closest drive</option>
         <option value="miles">Shortest distance</option>
@@ -512,6 +517,10 @@ addEventListener("DOMContentLoaded", () => {
   const loadOrigin = () => { try { const v = localStorage.getItem(ORIGIN_KEY); return ["sea", "pdx", "any"].includes(v) ? v : null; } catch { return null; } };
   const saveOrigin = () => { try { localStorage.setItem(ORIGIN_KEY, f.origin); } catch {} };
   const f = { ...defaults, origin: loadOrigin() || defaults.origin };
+  const SAVED_KEY = "atlas.saved";
+  const saved = new Set((() => { try { const v = JSON.parse(localStorage.getItem(SAVED_KEY)); return Array.isArray(v) ? v : []; } catch { return []; } })());
+  const persistSaved = () => { try { localStorage.setItem(SAVED_KEY, JSON.stringify([...saved])); } catch {} };
+  let savedOnly = false;
   let selected = null;
   let active = null; // the one route row in the tab order (roving tabindex)
   let returnTo = null; // where focus goes when the drawer closes
@@ -556,7 +565,8 @@ addEventListener("DOMContentLoaded", () => {
   };
   let sortKey = "drive";
   $("#sort").addEventListener("change", (e) => { sortKey = e.target.value; render(); });
-  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); saveOrigin(); render(); };
+  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); savedOnly = false; saveOrigin(); render(); };
+  $("#saved-toggle").addEventListener("click", () => { savedOnly = !savedOnly; render(); });
   $("#reset").addEventListener("click", resetFilters);
   $("#reset2").addEventListener("click", resetFilters);
 
@@ -597,6 +607,7 @@ addEventListener("DOMContentLoaded", () => {
   function matches(r) {
     if (f.month && !r.months.includes(f.month)) return false;
     if (f.state !== "all" && r.state !== f.state) return false;
+    if (savedOnly && !saved.has(r.id)) return false;
     if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav) return false;
     return f.drive >= 7 || driveFrom(r).h <= f.drive; // 7 h = "any"
   }
@@ -619,6 +630,12 @@ addEventListener("DOMContentLoaded", () => {
     $("#grav-out").textContent = `${f.grav}%`;
     $("#drive-out").textContent = f.drive >= 7 ? "any" : `≤ ${f.drive} h`;
 
+    const known = ROUTES.filter((r) => saved.has(r.id)).length;
+    if (!known) savedOnly = false;
+    const toggle = $("#saved-toggle");
+    toggle.hidden = !known;
+    toggle.textContent = `Saved (${known})`;
+    toggle.setAttribute("aria-pressed", savedOnly);
     const shown = ROUTES.filter(matches).sort(SORTS[sortKey]);
     $("#count").textContent = `${shown.length} of ${ROUTES.length} routes`;
 
@@ -635,7 +652,7 @@ addEventListener("DOMContentLoaded", () => {
       const d = driveFrom(r);
       el.innerHTML = `<h2>${r.name}</h2>
         <div class="nums"><b>${r.miles}</b> mi · <b>${fmt(r.gain)}</b> ft<br>${r.gravel}% gravel<br>${d.h}h from ${d.from.toUpperCase()}</div>
-        <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span></div>`;
+        <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span>${saved.has(r.id) ? ' <span class="saved-tag">★ Saved</span>' : ""}</div>`;
       el.addEventListener("click", () => select(r.id, true, true));
       el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(r.id, true, true); } });
       el.addEventListener("mouseenter", () => hover(r.id, true));
@@ -777,6 +794,7 @@ addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="actions">
           <button class="btn" id="copy">Copy ride brief</button>
+          <button class="btn ghost" id="save" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save for later"}</button>
           <button class="btn ghost" id="copy-link">Copy link</button>
           <button class="btn ghost" id="zoom">Zoom to route</button>
         </div>
@@ -810,6 +828,15 @@ addEventListener("DOMContentLoaded", () => {
     };
     d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
+    d.querySelector("#save").onclick = (e) => {
+      const on = !saved.has(r.id);
+      on ? saved.add(r.id) : saved.delete(r.id);
+      persistSaved();
+      e.currentTarget.setAttribute("aria-pressed", on);
+      e.currentTarget.textContent = on ? "★ Saved" : "☆ Save for later";
+      toast(on ? "Saved. Find it under Saved in the route list." : "Removed from saved.");
+      render();
+    };
     d.querySelector("#copy-link").onclick = () => copyText(shareUrl(), "Link copied. Paste it in the club chat.");
   }
   function closeDrawer(restoreFocus) {
