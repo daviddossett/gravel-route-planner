@@ -164,3 +164,120 @@ test("saving a route keeps it across reloads and the Saved filter narrows the li
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
   expect(await rows.count()).toBeGreaterThan(total - 1);
 });
+
+test("state and month filters narrow the list and the count", async ({ page }) => {
+  await page.goto(PAGE);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeVisible();
+
+  await page.locator("#months button[aria-label=January]").click();
+  await expect(page.locator("#month-out")).toHaveText("January");
+  await expect(page.locator("#empty")).toBeVisible();
+
+  // Clicking the active month again clears it.
+  await page.locator("#months button[aria-label=January]").click();
+  await expect(page.locator("#month-out")).toHaveText("Any month");
+  await expect(rows.first()).toBeVisible();
+  const total = await rows.count();
+
+  await page.locator('#state button[data-v="WA"]').click();
+  await expect(page.locator('#state button[data-v="WA"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(rows.first()).toBeVisible();
+  await expect(rows.locator(".where", { hasText: ", OR" })).toHaveCount(0);
+  const wa = await rows.count();
+  expect(wa).toBeGreaterThan(0);
+  expect(wa).toBeLessThan(total);
+  await expect(page.locator("#count")).toHaveText(new RegExp(`^${wa} of \\d+ routes$`));
+});
+
+test("drive origin changes the listed drive times and is remembered", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  const nums = page.locator("#list .route .nums");
+  await expect(nums.first()).toContainText("from SEA");
+
+  await page.locator('#origin button[data-v="pdx"]').click();
+  await expect(nums.first()).toContainText("from PDX");
+  await expect(nums.filter({ hasText: "from SEA" })).toHaveCount(0);
+
+  await page.goto(`${PAGE}?month=any`);
+  await expect(page.locator('#origin button[data-v="pdx"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(nums.first()).toContainText("from PDX");
+});
+
+test("route list is keyboard operable: arrows move focus, Enter opens the drawer, Esc returns focus", async ({ page }) => {
+  await page.goto(PAGE);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeVisible();
+  const last = rows.last();
+  const second = rows.nth(1);
+
+  // Roving tabindex: exactly one row is in the tab order.
+  await expect(page.locator('#list .route[tabindex="0"]')).toHaveCount(1);
+
+  await rows.first().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(second).toBeFocused();
+  await expect(second).toHaveAttribute("tabindex", "0");
+  await page.keyboard.press("End");
+  await expect(last).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(rows.first()).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(rows.first()).toBeFocused();
+
+  await page.keyboard.press("ArrowDown");
+  await expect(second).toBeFocused();
+  await page.keyboard.press("Enter");
+  const drawer = page.locator("#drawer");
+  await expect(drawer).toHaveClass(/\bopen\b/);
+  await expect(second).toHaveAttribute("aria-selected", "true");
+
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toHaveClass(/\bopen\b/);
+  await expect(second).toBeFocused();
+  await expect(second).toHaveAttribute("aria-selected", "false");
+});
+
+test("deep link opens the linked route with its filters, and the URL follows the selection", async ({ page }) => {
+  await page.goto(`${PAGE}?route=klickitat&month=any&origin=pdx&state=WA`);
+  const drawer = page.locator("#drawer");
+  await expect(drawer).toHaveClass(/\bopen\b/);
+  await expect(drawer.locator("h2")).toContainText("Klickitat Trail");
+  await expect(page.locator('#list .route[aria-selected="true"]')).toHaveCount(1);
+  await expect(page.locator('#state button[data-v="WA"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('#origin button[data-v="pdx"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#month-out")).toHaveText("Any month");
+
+  expect(new URL(page.url()).searchParams.get("route")).toBe("klickitat");
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toHaveClass(/\bopen\b/);
+  await expect.poll(() => new URL(page.url()).searchParams.has("route")).toBe(false);
+  expect(new URL(page.url()).searchParams.get("state")).toBe("WA");
+});
+
+test("deep link to a route hidden by the default filters loosens them and says so", async ({ page }) => {
+  // Klickitat is a WA route not ridden in January, so both month=1 and state=OR hide it.
+  await page.goto(`${PAGE}?route=klickitat&month=1&state=OR`);
+  await expect(page.locator("#toast")).toHaveText("Filters loosened to show the linked route");
+  await expect(page.locator("#drawer")).toHaveClass(/\bopen\b/);
+  await expect(page.locator("#drawer h2")).toContainText("Klickitat Trail");
+  await expect(page.locator('#state button[data-v="all"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#month-out")).toHaveText("Any month");
+});
+
+test("drawer shows a ride-time estimate that follows and remembers the chosen pace", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(`${PAGE}?demo`);
+  const est = page.locator("#drawer #est");
+  await expect(est).toContainText(/About \d+h.* riding at a steady pace, plus .* driving each way/);
+  const steady = await est.textContent();
+
+  await page.locator("#pace").getByRole("button", { name: "Fast" }).click();
+  await expect(est).toContainText("fast pace");
+  expect(await est.textContent()).not.toBe(steady);
+  await expect(page.locator("#pace button[aria-pressed='true']")).toHaveText("Fast");
+
+  await page.reload();
+  await expect(page.locator("#pace button[aria-pressed='true']")).toHaveText("Fast");
+  expect(errors).toEqual([]);
+});
