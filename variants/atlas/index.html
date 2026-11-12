@@ -9,13 +9,13 @@
 <script>
   // Resolve the theme before first paint so there's no flash.
   (() => {
-    const KEY = "atlas-theme", BAR = { light: "#f4f1ea", dark: "#161a17" };
+    const KEY = "atlas-theme", BAR = { light: "#f4f1ea", dark: "#161a17", midnight: "#0f1626", sunset: "#f6e6d3", contrast: "#000000", solarizedlight: "#fdf6e3", solarizeddark: "#002b36", dracula: "#282a36", nord: "#2e3440", monokai: "#272822", gruvbox: "#282828", tokyonight: "#1a1b26" }, DARK = { dark: 1, midnight: 1, contrast: 1, solarizeddark: 1, dracula: 1, nord: 1, monokai: 1, gruvbox: 1, tokyonight: 1 };
     const root = document.documentElement, mq = matchMedia("(prefers-color-scheme: dark)");
     let pref = "system";
-    try { const v = localStorage.getItem(KEY); if (v === "light" || v === "dark") pref = v; } catch (e) {}
+    try { const v = localStorage.getItem(KEY); if (v in BAR) pref = v; } catch (e) {}
     const apply = () => {
       const theme = pref === "system" ? (mq.matches ? "dark" : "light") : pref;
-      root.dataset.theme = theme; root.dataset.themePref = pref;
+      root.dataset.theme = theme; root.dataset.dark = DARK[theme] ? "1" : "0"; root.dataset.themePref = pref;
       document.querySelector('meta[name="theme-color"]').content = BAR[theme];
       document.dispatchEvent(new CustomEvent("atlas:theme", { detail: { theme, pref } }));
     };
@@ -23,7 +23,7 @@
     window.atlasTheme = {
       get pref() { return pref; },
       set(p) {
-        pref = p === "light" || p === "dark" ? p : "system";
+        pref = p in BAR ? p : "system";
         try { pref === "system" ? localStorage.removeItem(KEY) : localStorage.setItem(KEY, pref); } catch (e) {}
         apply();
       }
@@ -107,6 +107,126 @@
     --casing: #111412;
     color-scheme: dark;
   }
+  :root[data-theme="midnight"] {
+    --paper: #0f1626; --paper-2: #172036; --ink: #e2e8f5; --ink-2: #9aa7c2; --line: #2a3752;
+    --forest: #7fc4d6; --rust: #ff8f7a; --route: #f2d9a0; --sky: #8fb4ff;
+    --surface: #131c2f; --selected: #1d2842; --stamp: #e2e8f5;
+    --fun-easy: #9fe0c0; --fun-easy-bg: #143027;
+    --fun-mid: #f2c46b; --fun-mid-bg: #36300f;
+    --fun-hard: #ff9f90; --fun-hard-bg: #3b1d24;
+    --shadow: 0 0 0; --map-bg: #121a2c;
+    --tile-filter: invert(.9) hue-rotate(200deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #0b1020;
+    color-scheme: dark;
+  }
+  :root[data-theme="sunset"] {
+    --paper: #f6e6d3; --paper-2: #efd8bf; --ink: #2e1d16; --ink-2: #6a4a3c; --line: #dcbfa3;
+    --forest: #7a4a2d; --rust: #b8321a; --route: #6b2f3a; --sky: #9a4f7a;
+    --surface: #fbf0e2; --selected: #fffaf2; --on-sun: #2e1d16; --compass-face: #fbf0e2; --stamp: #2e1d16;
+    --fun-easy: #5b6b1f; --fun-easy-bg: #eaecc8;
+    --fun-mid: #8a4b00; --fun-mid-bg: #fbdcab;
+    --fun-hard: #a8281a; --fun-hard-bg: #f6cfc0;
+    --shadow: 46 29 22; --map-bg: #ecd9c0;
+    --tile-filter: sepia(.45) saturate(.6) hue-rotate(-12deg) brightness(1.02);
+    --casing: #fffaf2;
+    color-scheme: light;
+  }
+  :root[data-theme="contrast"] {
+    --paper: #000; --paper-2: #0d0d0d; --ink: #fff; --ink-2: #e0e0e0; --line: #8a8a8a;
+    --forest: #6dff9c; --rust: #ff9466; --route: #ffe566; --sky: #66d9ff;
+    --surface: #000; --selected: #1f1f1f; --stamp: #fff;
+    --fun-easy: #6dff9c; --fun-easy-bg: #003d1a;
+    --fun-mid: #ffe566; --fun-mid-bg: #4a3d00;
+    --fun-hard: #ff9a80; --fun-hard-bg: #520f00;
+    --shadow: 0 0 0; --map-bg: #0a0a0a;
+    --tile-filter: invert(.92) hue-rotate(180deg) saturate(0) brightness(.85) contrast(1.1);
+    --casing: #000;
+    color-scheme: dark;
+  }
+  :root[data-theme="solarizedlight"] {
+    --paper: #fdf6e3; --paper-2: #eee8d5; --ink: #073642; --ink-2: #546a70; --line: #d9d2bd;
+    --forest: #5f6f00; --rust: #cb4b16; --route: #6c5a3a; --sky: #1f78b4;
+    --surface: #fffbf0; --selected: #fff; --on-sun: #073642; --compass-face: #fffbf0; --stamp: #073642;
+    --fun-easy: #5f6f00; --fun-easy-bg: #eef0c8;
+    --fun-mid: #876100; --fun-mid-bg: #f8e8b8;
+    --fun-hard: #b02a1a; --fun-hard-bg: #f6d9ca;
+    --shadow: 7 54 66; --map-bg: #eee8d5;
+    --tile-filter: sepia(.4) saturate(.5) brightness(1.03);
+    --casing: #fdf6e3;
+    color-scheme: light;
+  }
+  :root[data-theme="solarizeddark"] {
+    --paper: #002b36; --paper-2: #073642; --ink: #eee8d5; --ink-2: #99a7a7; --line: #1d4752;
+    --forest: #a1b43a; --rust: #e88e6f; --route: #e8cf9a; --sky: #4aa3e0;
+    --surface: #05323d; --selected: #0b3f4c; --stamp: #eee8d5;
+    --fun-easy: #a1b43a; --fun-easy-bg: #1c3a22;
+    --fun-mid: #e0b84a; --fun-mid-bg: #3a3010;
+    --fun-hard: #ff8a70; --fun-hard-bg: #40221c;
+    --shadow: 0 0 0; --map-bg: #04323d;
+    --tile-filter: invert(.9) hue-rotate(160deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #00212a;
+    color-scheme: dark;
+  }
+  :root[data-theme="dracula"] {
+    --paper: #282a36; --paper-2: #343746; --ink: #f8f8f2; --ink-2: #b6b9d0; --line: #44475a;
+    --forest: #50fa7b; --rust: #ff896b; --route: #f1fa8c; --sky: #8be9fd;
+    --surface: #2e303e; --selected: #3a3d50; --stamp: #f8f8f2;
+    --fun-easy: #50fa7b; --fun-easy-bg: #1f3a2c;
+    --fun-mid: #f1fa8c; --fun-mid-bg: #3b3d1f;
+    --fun-hard: #ff9580; --fun-hard-bg: #4a2630;
+    --shadow: 0 0 0; --map-bg: #2b2d3a;
+    --tile-filter: invert(.9) hue-rotate(220deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #1e1f29;
+    color-scheme: dark;
+  }
+  :root[data-theme="nord"] {
+    --paper: #2e3440; --paper-2: #3b4252; --ink: #eceff4; --ink-2: #b6bece; --line: #4c566a;
+    --forest: #a3be8c; --rust: #e8b29f; --route: #ebcb8b; --sky: #88c0d0;
+    --surface: #333a47; --selected: #434c5e; --stamp: #eceff4;
+    --fun-easy: #a3be8c; --fun-easy-bg: #2f3f33;
+    --fun-mid: #ebcb8b; --fun-mid-bg: #453f2c;
+    --fun-hard: #e8a090; --fun-hard-bg: #4a3236;
+    --shadow: 0 0 0; --map-bg: #323845;
+    --tile-filter: invert(.9) hue-rotate(190deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #242933;
+    color-scheme: dark;
+  }
+  :root[data-theme="monokai"] {
+    --paper: #272822; --paper-2: #34352d; --ink: #f8f8f2; --ink-2: #b8b8a8; --line: #49483e;
+    --forest: #a6e22e; --rust: #ff8249; --route: #e6db74; --sky: #66d9ef;
+    --surface: #2d2e27; --selected: #3a3b32; --stamp: #f8f8f2;
+    --fun-easy: #a6e22e; --fun-easy-bg: #2f3a17;
+    --fun-mid: #e6db74; --fun-mid-bg: #3d3a17;
+    --fun-hard: #ff6b9a; --fun-hard-bg: #44202e;
+    --shadow: 0 0 0; --map-bg: #2a2b25;
+    --tile-filter: invert(.9) hue-rotate(180deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #1c1d19;
+    color-scheme: dark;
+  }
+  :root[data-theme="gruvbox"] {
+    --paper: #282828; --paper-2: #32302f; --ink: #ebdbb2; --ink-2: #bdae93; --line: #504945;
+    --forest: #b8bb26; --rust: #fe8019; --route: #fabd2f; --sky: #83a598;
+    --surface: #2e2c2b; --selected: #3c3836; --stamp: #ebdbb2;
+    --fun-easy: #b8bb26; --fun-easy-bg: #333512;
+    --fun-mid: #fabd2f; --fun-mid-bg: #3d3010;
+    --fun-hard: #ff7a62; --fun-hard-bg: #44201a;
+    --shadow: 0 0 0; --map-bg: #2b2a29;
+    --tile-filter: invert(.9) hue-rotate(170deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #1d2021;
+    color-scheme: dark;
+  }
+  :root[data-theme="tokyonight"] {
+    --paper: #1a1b26; --paper-2: #24283b; --ink: #c0caf5; --ink-2: #9aa5ce; --line: #343b58;
+    --forest: #9ece6a; --rust: #ff9e64; --route: #e0af68; --sky: #7aa2f7;
+    --surface: #1f2335; --selected: #292e42; --stamp: #c0caf5;
+    --fun-easy: #9ece6a; --fun-easy-bg: #243320;
+    --fun-mid: #e0af68; --fun-mid-bg: #3a2f1a;
+    --fun-hard: #f7768e; --fun-hard-bg: #402030;
+    --shadow: 0 0 0; --map-bg: #1d202f;
+    --tile-filter: invert(.9) hue-rotate(210deg) saturate(.35) brightness(.9) contrast(.9);
+    --casing: #15161e;
+    color-scheme: dark;
+  }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body { font-family: var(--sans); color: var(--ink); background: var(--paper); -webkit-font-smoothing: antialiased; }
@@ -123,8 +243,7 @@
   .spin svg .n { fill: var(--rust); }
   .spin svg .s { fill: var(--on-sun); }
   .theme-pick { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; color: var(--ink-2); }
-  .theme-pick .seg { display: inline-grid; grid-template-columns: repeat(3, auto); }
-  .theme-pick .seg button { font-size: 11px; padding: 6px 9px; }
+  .theme-pick select { font: inherit; font-size: 12px; padding: 6px 8px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
   .spin.go svg .needle { animation: whirl 1.1s cubic-bezier(.2, .9, .25, 1); transform-origin: 12px 12px; }
   @keyframes whirl { from { transform: rotate(0); } to { transform: rotate(1080deg); } }
   .masthead h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.05; }
@@ -150,9 +269,12 @@
   input[type=range] { width: 100%; height: 24px; accent-color: var(--forest); margin: 0; }
   button:focus-visible, input:focus-visible, .route:focus-visible { outline: 2px solid var(--rust); outline-offset: 2px; }
 
-  .list-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 22px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--line); }
+  .list-head { display: flex; flex-wrap: wrap; row-gap: 6px; justify-content: space-between; align-items: center; padding: 10px 22px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--line); }
   .list-head button { font: 500 13px var(--sans); background: none; border: 0; color: var(--forest); cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
   .list-head .sort { display: flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 14px; }
+  .list-head .saved-toggle { white-space: nowrap; margin-right: 10px; order: 1; text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; min-height: 28px; color: var(--ink); }
+  .list-head .saved-toggle[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .saved-tag { white-space: nowrap; font: 700 11px/1 var(--sans); letter-spacing: .02em; color: var(--forest); margin-left: 4px; }
   .list-head select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
   .list { overflow-y: auto; flex: 1; min-height: 0; }
   .route { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 22px; border-bottom: 1px solid var(--line); cursor: pointer; background: transparent; transition: background .15s; }
@@ -211,8 +333,13 @@
   .stat .v { font-family: var(--mono); font-size: 17px; font-weight: 500; }
   .stat .k { font-size: 12px; color: var(--ink-2); }
   .drawer .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .ride-time { margin: 12px 0 4px; font-size: 13px; color: var(--ink-2); }
+  .ride-time .seg { margin: 6px 0; max-width: 320px; }
+  .ride-time .est { margin: 0; line-height: 1.4; }
+  .ride-time .est b { font-family: var(--mono); font-weight: 500; color: var(--ink); }
   .btn { font: 600 13px var(--sans); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--ink); }
+  .btn[aria-pressed="true"] { border-color: var(--forest); color: var(--forest); }
   .btn:hover { background: var(--forest); border-color: var(--forest); color: var(--paper); }
   .drawer .detail { padding: 16px 20px 18px; display: grid; grid-template-columns: 1.4fr 1fr; gap: 6px 28px; min-width: 0; }
   .profile { grid-column: 1 / -1; }
@@ -306,11 +433,21 @@
       </button>
       <p>Pick a month, poke the map, and go get gloriously dusty somewhere in Oregon or Washington.</p>
       <div class="theme-pick"><span id="theme-label">Theme</span>
-        <div class="seg" role="group" aria-labelledby="theme-label" id="theme">
-          <button type="button" data-v="light" aria-pressed="false">Light</button>
-          <button type="button" data-v="dark" aria-pressed="false">Dark</button>
-          <button type="button" data-v="system" aria-pressed="false">System</button>
-        </div>
+        <select id="theme" aria-labelledby="theme-label">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+          <option value="midnight">Midnight</option>
+          <option value="sunset">Sunset</option>
+          <option value="solarizedlight">Solarized Light</option>
+          <option value="solarizeddark">Solarized Dark</option>
+          <option value="dracula">Dracula</option>
+          <option value="nord">Nord</option>
+          <option value="monokai">Monokai</option>
+          <option value="gruvbox">Gruvbox Dark</option>
+          <option value="tokyonight">Tokyo Night</option>
+          <option value="contrast">High contrast</option>
+        </select>
       </div>
     </header>
 
@@ -347,6 +484,7 @@
     </section>
 
     <div class="list-head"><span id="count" aria-live="polite"></span>
+      <button type="button" class="saved-toggle" id="saved-toggle" aria-pressed="false" hidden></button>
       <label class="sort">Sort <select id="sort">
         <option value="drive">Closest drive</option>
         <option value="miles">Shortest distance</option>
@@ -384,6 +522,10 @@ addEventListener("DOMContentLoaded", () => {
   const loadOrigin = () => { try { const v = localStorage.getItem(ORIGIN_KEY); return ["sea", "pdx", "any"].includes(v) ? v : null; } catch { return null; } };
   const saveOrigin = () => { try { localStorage.setItem(ORIGIN_KEY, f.origin); } catch {} };
   const f = { ...defaults, origin: loadOrigin() || defaults.origin };
+  const SAVED_KEY = "atlas.saved";
+  const saved = new Set((() => { try { const v = JSON.parse(localStorage.getItem(SAVED_KEY)); return Array.isArray(v) ? v : []; } catch { return []; } })());
+  const persistSaved = () => { try { localStorage.setItem(SAVED_KEY, JSON.stringify([...saved])); } catch {} };
+  let savedOnly = false;
   let selected = null;
   let active = null; // the one route row in the tab order (roving tabindex)
   let returnTo = null; // where focus goes when the drawer closes
@@ -428,14 +570,15 @@ addEventListener("DOMContentLoaded", () => {
   };
   let sortKey = "drive";
   $("#sort").addEventListener("change", (e) => { sortKey = e.target.value; render(); });
-  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); saveOrigin(); render(); };
+  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); savedOnly = false; saveOrigin(); render(); };
+  $("#saved-toggle").addEventListener("click", () => { savedOnly = !savedOnly; render(); });
   $("#reset").addEventListener("click", resetFilters);
   $("#reset2").addEventListener("click", resetFilters);
 
   // Theme picker
   const themeEl = $("#theme");
-  const syncTheme = () => themeEl.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === window.atlasTheme.pref));
-  themeEl.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) window.atlasTheme.set(b.dataset.v); });
+  const syncTheme = () => { themeEl.value = window.atlasTheme.pref; };
+  themeEl.addEventListener("change", () => window.atlasTheme.set(themeEl.value));
   document.addEventListener("atlas:theme", () => { readColors(); syncTheme(); styleLines(); });
   syncTheme();
 
@@ -469,6 +612,7 @@ addEventListener("DOMContentLoaded", () => {
   function matches(r) {
     if (f.month && !r.months.includes(f.month)) return false;
     if (f.state !== "all" && r.state !== f.state) return false;
+    if (savedOnly && !saved.has(r.id)) return false;
     if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav) return false;
     return f.drive >= 7 || driveFrom(r).h <= f.drive; // 7 h = "any"
   }
@@ -491,6 +635,12 @@ addEventListener("DOMContentLoaded", () => {
     $("#grav-out").textContent = `${f.grav}%`;
     $("#drive-out").textContent = f.drive >= 7 ? "any" : `≤ ${f.drive} h`;
 
+    const known = ROUTES.filter((r) => saved.has(r.id)).length;
+    if (!known) savedOnly = false;
+    const toggle = $("#saved-toggle");
+    toggle.hidden = !known;
+    toggle.textContent = `Saved (${known})`;
+    toggle.setAttribute("aria-pressed", savedOnly);
     const shown = ROUTES.filter(matches).sort(SORTS[sortKey]);
     $("#count").textContent = `${shown.length} of ${ROUTES.length} routes`;
 
@@ -507,7 +657,7 @@ addEventListener("DOMContentLoaded", () => {
       const d = driveFrom(r);
       el.innerHTML = `<h2>${r.name}</h2>
         <div class="nums"><b>${r.miles}</b> mi · <b>${fmt(r.gain)}</b> ft<br>${r.gravel}% gravel<br>${d.h}h from ${d.from.toUpperCase()}</div>
-        <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span></div>`;
+        <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span>${saved.has(r.id) ? ' <span class="saved-tag">★ Saved</span>' : ""}</div>`;
       el.addEventListener("click", () => select(r.id, true, true));
       el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(r.id, true, true); } });
       el.addEventListener("mouseenter", () => hover(r.id, true));
@@ -630,6 +780,17 @@ addEventListener("DOMContentLoaded", () => {
     </svg>`;
   }
 
+  // Rough moving-time estimate: flat speed slowed by loose surface, plus a climbing allowance.
+  const PACES = { relaxed: { label: "Relaxed", mph: 10, ftPerHr: 2500 }, steady: { label: "Steady", mph: 12, ftPerHr: 3000 }, fast: { label: "Fast", mph: 14, ftPerHr: 3500 } };
+  const PACE_KEY = "atlas.pace";
+  let pace = (() => { try { const v = localStorage.getItem(PACE_KEY); return v in PACES ? v : "steady"; } catch { return "steady"; } })();
+  const rideHours = (r) => {
+    const p = PACES[pace];
+    const h = r.miles / (p.mph * (1 - 0.15 * r.gravel / 100)) + r.gain / p.ftPerHr;
+    return Math.round(h * 4) / 4;
+  };
+  const hm = (h) => { const m = Math.round(h * 60); return m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m / 60}h`; };
+  const rideTimeText = (r) => `About ${hm(rideHours(r))} riding at a ${pace} pace, plus ${hm(driveFrom(r).h)} driving each way from ${driveFrom(r).from.toUpperCase()}.`;
   const waterLabel = { reliable: "Reliable", limited: "Limited", none: "None — carry it all" };
   function openDrawer(r) {
     const d = $("#drawer");
@@ -645,8 +806,13 @@ addEventListener("DOMContentLoaded", () => {
           <div class="stat"><div class="v">${r.gravel}%</div><div class="k">gravel</div></div>
           <div class="stat"><div class="v">${r.tire}</div><div class="k">mm tires</div></div>
         </div>
+        <div class="ride-time">
+          <div class="seg" role="group" aria-label="Your pace" id="pace">${Object.entries(PACES).map(([k, v]) => `<button type="button" data-v="${k}" aria-pressed="${k === pace}">${v.label}</button>`).join("")}</div>
+          <p class="est" id="est" aria-live="polite">${rideTimeText(r)}</p>
+        </div>
         <div class="actions">
           <button class="btn" id="copy">Copy ride brief</button>
+          <button class="btn ghost" id="save" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save for later"}</button>
           <button class="btn ghost" id="copy-link">Copy link</button>
           <button class="btn ghost" id="zoom">Zoom to route</button>
         </div>
@@ -671,8 +837,24 @@ addEventListener("DOMContentLoaded", () => {
       </div>`;
     d.classList.add("open"); d.inert = false;
     d.querySelector(".close").onclick = () => closeDrawer(true);
+    d.querySelector("#pace").onclick = (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      pace = b.dataset.v;
+      try { localStorage.setItem(PACE_KEY, pace); } catch {}
+      d.querySelectorAll("#pace button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      d.querySelector("#est").textContent = rideTimeText(r);
+    };
     d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
+    d.querySelector("#save").onclick = (e) => {
+      const on = !saved.has(r.id);
+      on ? saved.add(r.id) : saved.delete(r.id);
+      persistSaved();
+      e.currentTarget.setAttribute("aria-pressed", on);
+      e.currentTarget.textContent = on ? "★ Saved" : "☆ Save for later";
+      toast(on ? "Saved. Find it under Saved in the route list." : "Removed from saved.");
+      render();
+    };
     d.querySelector("#copy-link").onclick = () => copyText(shareUrl(), "Link copied. Paste it in the club chat.");
   }
   function closeDrawer(restoreFocus) {
@@ -699,7 +881,7 @@ addEventListener("DOMContentLoaded", () => {
     return runs.join(", ");
   }
   function copyBrief(r) {
-    const text = `${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]} · ${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\nMap: ${shareUrl()}\n(Sample data — verify before riding.)`;
+    const text = `${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]} · ${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nEst. riding time: ${hm(rideHours(r))} (${pace} pace)\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\nMap: ${shareUrl()}\n(Sample data — verify before riding.)`;
     copyText(text, "Ride brief copied. Go get dusty.");
   }
   function copyText(text, msg) {
