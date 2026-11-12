@@ -329,6 +329,10 @@
   .stat .v { font-family: var(--mono); font-size: 17px; font-weight: 500; }
   .stat .k { font-size: 12px; color: var(--ink-2); }
   .drawer .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .ride-time { margin: 12px 0 4px; font-size: 13px; color: var(--ink-2); }
+  .ride-time .seg { margin: 6px 0; max-width: 320px; }
+  .ride-time .est { margin: 0; line-height: 1.4; }
+  .ride-time .est b { font-family: var(--mono); font-weight: 500; color: var(--ink); }
   .btn { font: 600 13px var(--sans); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--ink); }
   .btn:hover { background: var(--forest); border-color: var(--forest); color: var(--paper); }
@@ -741,6 +745,17 @@ addEventListener("DOMContentLoaded", () => {
     </svg>`;
   }
 
+  // Rough moving-time estimate: flat speed slowed by loose surface, plus a climbing allowance.
+  const PACES = { relaxed: { label: "Relaxed", mph: 10, ftPerHr: 2500 }, steady: { label: "Steady", mph: 12, ftPerHr: 3000 }, fast: { label: "Fast", mph: 14, ftPerHr: 3500 } };
+  const PACE_KEY = "atlas.pace";
+  let pace = (() => { try { const v = localStorage.getItem(PACE_KEY); return v in PACES ? v : "steady"; } catch { return "steady"; } })();
+  const rideHours = (r) => {
+    const p = PACES[pace];
+    const h = r.miles / (p.mph * (1 - 0.15 * r.gravel / 100)) + r.gain / p.ftPerHr;
+    return Math.round(h * 4) / 4;
+  };
+  const hm = (h) => { const m = Math.round(h * 60); return m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m / 60}h`; };
+  const rideTimeText = (r) => `About ${hm(rideHours(r))} riding at a ${pace} pace, plus ${hm(driveFrom(r).h)} driving each way from ${driveFrom(r).from.toUpperCase()}.`;
   const waterLabel = { reliable: "Reliable", limited: "Limited", none: "None — carry it all" };
   function openDrawer(r) {
     const d = $("#drawer");
@@ -755,6 +770,10 @@ addEventListener("DOMContentLoaded", () => {
           <div class="stat"><div class="v">${fmt(r.gain)}</div><div class="k">ft climb</div></div>
           <div class="stat"><div class="v">${r.gravel}%</div><div class="k">gravel</div></div>
           <div class="stat"><div class="v">${r.tire}</div><div class="k">mm tires</div></div>
+        </div>
+        <div class="ride-time">
+          <div class="seg" role="group" aria-label="Your pace" id="pace">${Object.entries(PACES).map(([k, v]) => `<button type="button" data-v="${k}" aria-pressed="${k === pace}">${v.label}</button>`).join("")}</div>
+          <p class="est" id="est" aria-live="polite">${rideTimeText(r)}</p>
         </div>
         <div class="actions">
           <button class="btn" id="copy">Copy ride brief</button>
@@ -782,6 +801,13 @@ addEventListener("DOMContentLoaded", () => {
       </div>`;
     d.classList.add("open"); d.inert = false;
     d.querySelector(".close").onclick = () => closeDrawer(true);
+    d.querySelector("#pace").onclick = (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      pace = b.dataset.v;
+      try { localStorage.setItem(PACE_KEY, pace); } catch {}
+      d.querySelectorAll("#pace button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      d.querySelector("#est").textContent = rideTimeText(r);
+    };
     d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
     d.querySelector("#copy-link").onclick = () => copyText(shareUrl(), "Link copied. Paste it in the club chat.");
@@ -810,7 +836,7 @@ addEventListener("DOMContentLoaded", () => {
     return runs.join(", ");
   }
   function copyBrief(r) {
-    const text = `${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]} · ${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\nMap: ${shareUrl()}\n(Sample data — verify before riding.)`;
+    const text = `${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]} · ${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nEst. riding time: ${hm(rideHours(r))} (${pace} pace)\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\nMap: ${shareUrl()}\n(Sample data — verify before riding.)`;
     copyText(text, "Ride brief copied. Go get dusty.");
   }
   function copyText(text, msg) {

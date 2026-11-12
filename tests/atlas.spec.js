@@ -238,3 +238,20 @@ test("deep link to a route hidden by the default filters loosens them and says s
   await expect(page.locator('#state button[data-v="all"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#month-out")).toHaveText("Any month");
 });
+
+test("drawer shows a ride-time estimate that follows and remembers the chosen pace", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(`${PAGE}?demo`);
+  const est = page.locator("#drawer #est");
+  await expect(est).toContainText(/About \d+h.* riding at a steady pace, plus .* driving each way/);
+  const steady = await est.textContent();
+
+  await page.locator("#pace").getByRole("button", { name: "Fast" }).click();
+  await expect(est).toContainText("fast pace");
+  expect(await est.textContent()).not.toBe(steady);
+  await expect(page.locator("#pace button[aria-pressed='true']")).toHaveText("Fast");
+
+  await page.reload();
+  await expect(page.locator("#pace button[aria-pressed='true']")).toHaveText("Fast");
+  expect(errors).toEqual([]);
+});
