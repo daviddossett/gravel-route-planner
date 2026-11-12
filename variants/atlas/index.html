@@ -403,11 +403,16 @@
     .app { grid-template-columns: 1fr; height: 100vh; height: 100dvh; }
     .stage { z-index: 1; }
     /* The list is an overlay over the full-height map, toggled by the Routes button. */
-    .panel { position: fixed; inset: 0; z-index: 5; border-right: 0; overflow-y: auto; overscroll-behavior: contain; padding-top: 56px; visibility: hidden; transform: translateY(12px); opacity: 0; transition: opacity .18s, transform .18s, visibility 0s .18s; }
+    .panel { position: fixed; inset: 0; z-index: 5; border-right: 0; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(68px + env(safe-area-inset-top)); visibility: hidden; transform: translateY(12px); opacity: 0; transition: opacity .18s, transform .18s, visibility 0s .18s; }
     .app.panel-open .panel { visibility: visible; transform: none; opacity: 1; transition: opacity .18s, transform .18s; }
     .list { overflow: visible; }
-    .panel-toggle { display: block; position: fixed; top: 12px; left: 12px; z-index: 6; min-height: 40px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); font: 600 14px/1 var(--sans); box-shadow: 0 2px 8px rgba(24, 32, 27, .25); cursor: pointer; }
-    .net-status { top: 60px; }
+    /* Lives outside .stage so neither the map panes nor the open list can paint over it. Ink on paper keeps it legible on every theme and map. */
+    .panel-toggle { display: inline-flex; align-items: center; gap: 8px; position: fixed; top: calc(12px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); z-index: 6; min-height: 44px; min-width: 44px; padding: 0 18px 0 14px; border: 0; border-radius: 999px; background: var(--ink); color: var(--paper); font: 600 15px/1 var(--sans); box-shadow: 0 0 0 2px var(--paper), 0 3px 10px rgba(0, 0, 0, .35); cursor: pointer; }
+    .panel-toggle svg { width: 18px; height: 18px; flex: none; }
+    .panel-toggle .to-map, .app.panel-open .panel-toggle .to-list { display: none; }
+    .app.panel-open .panel-toggle .to-map { display: block; }
+    .panel-toggle:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
+    .net-status { top: calc(68px + env(safe-area-inset-top)); }
     .drawer {
       position: fixed; left: 8px; right: 8px; bottom: 8px;
       max-height: calc(60vh - 16px); max-height: calc(60dvh - 16px);
@@ -502,9 +507,13 @@
     <div id="map" role="region" aria-label="Map of routes"></div>
     <div class="map-fallback" id="fallback">The map needs an internet connection to load tiles. The route list still works.</div>
     <div class="toast" id="toast" role="status"></div>
-    <button class="panel-toggle" id="panel-toggle" type="button" aria-controls="panel" aria-expanded="false">Routes</button>
     <section class="drawer" id="drawer" aria-label="Selected route" inert></section>
   </main>
+  <button class="panel-toggle" id="panel-toggle" type="button" aria-controls="panel" aria-expanded="false">
+    <svg class="to-list" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
+    <svg class="to-map" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14"/></svg>
+    <span id="panel-toggle-label">Routes</span>
+  </button>
 </div>
 
 <script defer src="../../vendor/leaflet-1.9.4/leaflet.js"></script>
@@ -717,22 +726,25 @@ addEventListener("DOMContentLoaded", () => {
   });
 
   const appEl = $(".app"), panelToggle = $("#panel-toggle");
+  const isPhone = () => matchMedia("(max-width: 760px)").matches;
   function setPanel(open) {
     appEl.classList.toggle("panel-open", open);
     panelToggle.setAttribute("aria-expanded", open);
-    panelToggle.textContent = open ? "Show map" : "Routes";
+    $("#panel-toggle-label").textContent = open ? "Show map" : "Routes";
+    // Keep keyboard and screen reader focus inside the list while it covers the map.
+    $(".stage").inert = open;
   }
   panelToggle.addEventListener("click", () => setPanel(!appEl.classList.contains("panel-open")));
   matchMedia("(max-width: 760px)").addEventListener("change", () => setPanel(false));
 
   function select(id, fly, moveFocus) {
     selected = id;
-    if (matchMedia("(max-width: 760px)").matches) setPanel(false);
     const r = ROUTES.find((x) => x.id === id);
     document.querySelectorAll(".route").forEach((el) => el.setAttribute("aria-selected", el.dataset.id === id));
     const row = document.querySelector(`.route[data-id="${id}"]`);
     if (row) { setActive(id); row.scrollIntoView({ block: "nearest", behavior: reduceMotion() ? "auto" : "smooth" }); }
     if (moveFocus && !$("#drawer").contains(document.activeElement)) returnTo = document.activeElement;
+    if (isPhone()) setPanel(false);
     openDrawer(r);
     styleLines();
     syncUrl();
@@ -864,8 +876,13 @@ addEventListener("DOMContentLoaded", () => {
     styleLines();
     syncUrl();
     if (restoreFocus) {
-      const back = returnTo && returnTo.isConnected && returnTo !== document.body ? returnTo
+      const fromList = returnTo && returnTo.isConnected && $("#panel").contains(returnTo);
+      let back = returnTo && returnTo.isConnected && returnTo !== document.body ? returnTo
         : document.querySelector(`.route[data-id="${id}"]`) || document.querySelector("#list .route[tabindex='0']");
+      // On phones the list is a closed overlay: go back to it if that's where the drawer was opened from, else to its toggle.
+      if (back && isPhone() && $("#panel").contains(back) && !appEl.classList.contains("panel-open")) {
+        if (fromList) setPanel(true); else back = panelToggle;
+      }
       if (back) back.focus();
     }
     returnTo = null;
