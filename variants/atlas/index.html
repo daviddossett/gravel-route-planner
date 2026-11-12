@@ -294,6 +294,7 @@
   .disclaimer { padding: 10px 22px 12px; font-size: 12px; line-height: 1.4; color: var(--ink-2); border-top: 1px solid var(--line); background: var(--paper-2); }
 
   .stage { position: relative; min-width: 0; }
+  .panel-toggle { display: none; }
   #map { position: absolute; inset: 0; background: var(--map-bg); }
   #map .leaflet-tile-pane { filter: var(--tile-filter); }
   .map-fallback { position: absolute; inset: 0; display: none; place-items: center; text-align: center; padding: 40px; color: var(--ink-2); }
@@ -399,14 +400,22 @@
     .stage:has(.drawer.open) .net-status { left: calc(clamp(320px, 36%, 400px) + 28px); max-width: calc(100% - clamp(320px, 36%, 400px) - 96px); }
   }
   @media (max-width: 760px) {
-    .app { grid-template-columns: 1fr; grid-template-rows: 46vh 1fr; height: auto; min-height: 100vh; }
-    /* Above .panel so the pinned map and the fixed route sheet (inside .stage) aren't painted over by the list. */
-    .stage { grid-row: 1; position: sticky; top: 0; height: 46vh; z-index: 3; }
-    .panel { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); }
+    .app { grid-template-columns: 1fr; height: 100vh; height: 100dvh; }
+    .stage { z-index: 1; }
+    /* The list is an overlay over the full-height map, toggled by the Routes button. */
+    .panel { position: fixed; inset: 0; z-index: 5; border-right: 0; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(68px + env(safe-area-inset-top)); visibility: hidden; transform: translateY(12px); opacity: 0; transition: opacity .18s, transform .18s, visibility 0s .18s; }
+    .app.panel-open .panel { visibility: visible; transform: none; opacity: 1; transition: opacity .18s, transform .18s; }
     .list { overflow: visible; }
+    /* Lives outside .stage so neither the map panes nor the open list can paint over it. Ink on paper keeps it legible on every theme and map. */
+    .panel-toggle { display: inline-flex; align-items: center; gap: 8px; position: fixed; top: calc(12px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); z-index: 6; min-height: 44px; min-width: 44px; padding: 0 18px 0 14px; border: 0; border-radius: 999px; background: var(--ink); color: var(--paper); font: 600 15px/1 var(--sans); box-shadow: 0 0 0 2px var(--paper), 0 3px 10px rgba(0, 0, 0, .35); cursor: pointer; }
+    .panel-toggle svg { width: 18px; height: 18px; flex: none; }
+    .panel-toggle .to-map, .app.panel-open .panel-toggle .to-list { display: none; }
+    .app.panel-open .panel-toggle .to-map { display: block; }
+    .panel-toggle:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
+    .net-status { top: calc(68px + env(safe-area-inset-top)); }
     .drawer {
       position: fixed; left: 8px; right: 8px; bottom: 8px;
-      max-height: calc(54vh - 16px); max-height: calc(100dvh - 46vh - 16px);
+      max-height: calc(60vh - 16px); max-height: calc(60dvh - 16px);
       display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain;
     }
     .drawer .info, .drawer .detail { flex: none; }
@@ -420,7 +429,7 @@
 </head>
 <body>
 <div class="app">
-  <aside class="panel" aria-label="Route filters and list">
+  <aside class="panel" id="panel" aria-label="Route filters and list">
     <header class="masthead">
       <h1>Gravel Atlas</h1>
       <button class="spin" id="spin" type="button" title="Pick a random route from the ones that match">
@@ -500,6 +509,11 @@
     <div class="toast" id="toast" role="status"></div>
     <section class="drawer" id="drawer" aria-label="Selected route" inert></section>
   </main>
+  <button class="panel-toggle" id="panel-toggle" type="button" aria-controls="panel" aria-expanded="false">
+    <svg class="to-list" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
+    <svg class="to-map" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14"/></svg>
+    <span id="panel-toggle-label">Routes</span>
+  </button>
 </div>
 
 <script defer src="../../vendor/leaflet-1.9.4/leaflet.js"></script>
@@ -711,6 +725,18 @@ addEventListener("DOMContentLoaded", () => {
     rows[Math.max(0, Math.min(rows.length - 1, next))].focus();
   });
 
+  const appEl = $(".app"), panelToggle = $("#panel-toggle");
+  const isPhone = () => matchMedia("(max-width: 760px)").matches;
+  function setPanel(open) {
+    appEl.classList.toggle("panel-open", open);
+    panelToggle.setAttribute("aria-expanded", open);
+    $("#panel-toggle-label").textContent = open ? "Show map" : "Routes";
+    // Keep keyboard and screen reader focus inside the list while it covers the map.
+    $(".stage").inert = open;
+  }
+  panelToggle.addEventListener("click", () => setPanel(!appEl.classList.contains("panel-open")));
+  matchMedia("(max-width: 760px)").addEventListener("change", () => setPanel(false));
+
   function select(id, fly, moveFocus) {
     selected = id;
     const r = ROUTES.find((x) => x.id === id);
@@ -718,6 +744,7 @@ addEventListener("DOMContentLoaded", () => {
     const row = document.querySelector(`.route[data-id="${id}"]`);
     if (row) { setActive(id); row.scrollIntoView({ block: "nearest", behavior: reduceMotion() ? "auto" : "smooth" }); }
     if (moveFocus && !$("#drawer").contains(document.activeElement)) returnTo = document.activeElement;
+    if (isPhone()) setPanel(false);
     openDrawer(r);
     styleLines();
     syncUrl();
@@ -734,7 +761,10 @@ addEventListener("DOMContentLoaded", () => {
 
   // Keep the selected route clear of the details drawer, using its real size.
   function routePadding() {
-    if (matchMedia("(max-width: 760px)").matches) return { paddingTopLeft: [40, 40], paddingBottomRight: [40, 40] };
+    if (matchMedia("(max-width: 760px)").matches) {
+      const d = $("#drawer"), h = $("#map").offsetHeight;
+      return { paddingTopLeft: [40, 64], paddingBottomRight: [40, Math.min(d.offsetHeight + 24, h * .6)] };
+    }
     const d = $("#drawer");
     if (matchMedia("(min-width: 1100px)").matches) return { paddingTopLeft: [d.offsetLeft + d.offsetWidth + 40, 40], paddingBottomRight: [40, 40] };
     return { paddingTopLeft: [40, 40], paddingBottomRight: [40, $("#map").offsetHeight - d.offsetTop + 24] };
@@ -846,8 +876,13 @@ addEventListener("DOMContentLoaded", () => {
     styleLines();
     syncUrl();
     if (restoreFocus) {
-      const back = returnTo && returnTo.isConnected && returnTo !== document.body ? returnTo
+      const fromList = returnTo && returnTo.isConnected && $("#panel").contains(returnTo);
+      let back = returnTo && returnTo.isConnected && returnTo !== document.body ? returnTo
         : document.querySelector(`.route[data-id="${id}"]`) || document.querySelector("#list .route[tabindex='0']");
+      // On phones the list is a closed overlay: go back to it if that's where the drawer was opened from, else to its toggle.
+      if (back && isPhone() && $("#panel").contains(back) && !appEl.classList.contains("panel-open")) {
+        if (fromList) setPanel(true); else back = panelToggle;
+      }
       if (back) back.focus();
     }
     returnTo = null;
@@ -913,7 +948,9 @@ addEventListener("DOMContentLoaded", () => {
   }
   let tt; function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
   document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape" || !selected) return;
+    if (e.key !== "Escape") return;
+    if (appEl.classList.contains("panel-open")) { setPanel(false); panelToggle.focus(); return; }
+    if (!selected) return;
     const a = document.activeElement;
     closeDrawer($("#drawer").contains(a) || a === document.body);
   });

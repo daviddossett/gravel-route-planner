@@ -24,6 +24,12 @@ function watchErrors(page) {
   return errors;
 }
 
+// On phones the route list is an overlay behind the "Routes" button.
+async function openList(page) {
+  const toggle = page.locator("#panel-toggle");
+  if (await toggle.isVisible() && (await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: FIXED_DATE });
 });
@@ -32,7 +38,7 @@ test("demo loads with routes, a visible drawer, and Esc closes it", async ({ pag
   const errors = watchErrors(page);
   await page.goto(`${PAGE}?demo`);
 
-  await expect(page.locator("#list .route").first()).toBeVisible();
+  await expect(page.locator("#list .route").first()).toBeAttached();
 
   const drawer = page.locator("#drawer");
   await expect(drawer).toHaveClass(/\bopen\b/);
@@ -64,6 +70,7 @@ test("demo loads with routes, a visible drawer, and Esc closes it", async ({ pag
 test("route list still renders offline after the first visit", async ({ page, context }) => {
   const errors = watchErrors(page);
   await page.goto(PAGE);
+  await openList(page);
   await expect(page.locator("#list .route").first()).toBeVisible();
 
   // Wait until the service worker controls the page and has saved the route data.
@@ -79,6 +86,7 @@ test("route list still renders offline after the first visit", async ({ page, co
     expect(reachable, "uncached files should fail to load while offline").toBe(false);
 
     await page.reload();
+    await openList(page);
     await expect(page.locator("#list .route").first()).toBeVisible();
     await expect(page.locator("#net-status")).toContainText("Offline");
   } finally {
@@ -90,6 +98,7 @@ test("route list still renders offline after the first visit", async ({ page, co
 
 test("empty state keeps the listbox free of non-option children and reset works", async ({ page }) => {
   await page.goto(PAGE);
+  await openList(page);
   await expect(page.locator("#list .route").first()).toBeVisible();
 
   await page.locator("#dist").fill("25");
@@ -107,6 +116,7 @@ test("empty state keeps the listbox free of non-option children and reset works"
 
 test("sort control reorders the route list", async ({ page }) => {
   await page.goto(PAGE);
+  await openList(page);
   await expect(page.locator("#list .route").first()).toBeVisible();
   const miles = async () => page.locator("#list .route .nums b:first-child").allTextContents().then((a) => a.map(Number));
 
@@ -119,9 +129,49 @@ test("sort control reorders the route list", async ({ page }) => {
   expect(await miles()).not.toEqual(byMiles);
 });
 
+test("on phones the route list is a toggleable overlay over a full-height map", async ({ page }) => {
+  test.skip(!(page.viewportSize() && page.viewportSize().width <= 760), "phone layout only");
+  await page.goto(PAGE);
+  const toggle = page.locator("#panel-toggle");
+  await expect(page.locator("#list")).toBeHidden();
+  const mapBox = await page.locator("#map").boundingBox();
+  expect(mapBox.height).toBeGreaterThan(page.viewportSize().height - 2);
+
+  // The toggle must be a real touch target painted above the map tiles (stand in a tile-sized block for them) and the open list.
+  const onTop = () => toggle.evaluate((el) => {
+    const r = el.getBoundingClientRect(), hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    return { w: r.width, h: r.height, onTop: !!hit && el.contains(hit) };
+  });
+  await expect(toggle).toHaveAttribute("aria-controls", "panel");
+  await page.locator("#map .leaflet-tile-pane").evaluate((pane) => {
+    pane.append(Object.assign(document.createElement("div"), { style: "position:absolute;left:-2000px;top:-2000px;width:4000px;height:4000px;background:#fff;pointer-events:auto" }));
+  });
+  const closed = await onTop();
+  expect(closed.onTop, "Routes toggle should not be covered by the map").toBe(true);
+  expect(Math.min(closed.w, closed.h)).toBeGreaterThanOrEqual(44);
+
+  await toggle.click();
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  expect((await onTop()).onTop, "toggle should stay visible over the open list").toBe(true);
+  await expect(page.locator("#theme")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#list")).toBeHidden();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+
+  await page.locator("#list .route").first().click();
+  await expect(page.locator("#list")).toBeHidden();
+  await expect(page.locator("#drawer")).toHaveClass(/\bopen\b/);
+});
+
 test("theme picker switches themes and remembers the choice", async ({ page }) => {
   await page.clock.setFixedTime(FIXED_DATE);
   await page.goto(`${PAGE}?demo`);
+  await openList(page);
   await page.locator("#theme").selectOption("midnight");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "midnight");
   await page.reload();
@@ -132,6 +182,7 @@ test("theme picker switches themes and remembers the choice", async ({ page }) =
 test("IDE themes apply and set dark mode flag", async ({ page }) => {
   await page.clock.setFixedTime(FIXED_DATE);
   await page.goto(`${PAGE}?demo`);
+  await openList(page);
   for (const [theme, dark] of [["dracula", "1"], ["solarizedlight", "0"], ["tokyonight", "1"]]) {
     await page.locator("#theme").selectOption(theme);
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
@@ -142,7 +193,7 @@ test("IDE themes apply and set dark mode flag", async ({ page }) => {
 test("saving a route keeps it across reloads and the Saved filter narrows the list", async ({ page }) => {
   await page.goto(`${PAGE}?demo`);
   const rows = page.locator("#list .route");
-  await expect(rows.first()).toBeVisible();
+  await expect(rows.first()).toBeAttached();
   const total = await rows.count();
   await expect(page.locator("#saved-toggle")).toBeHidden();
 
@@ -155,7 +206,8 @@ test("saving a route keeps it across reloads and the Saved filter narrows the li
   await page.reload();
   const toggle = page.locator("#saved-toggle");
   await expect(toggle).toHaveText("Saved (1)");
-  await page.keyboard.press("Escape"); // the phone sheet covers the list
+  await page.keyboard.press("Escape"); // close the route drawer
+  await openList(page);
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-pressed", "true");
   await expect(rows).toHaveCount(1);
@@ -167,6 +219,7 @@ test("saving a route keeps it across reloads and the Saved filter narrows the li
 
 test("state and month filters narrow the list and the count", async ({ page }) => {
   await page.goto(PAGE);
+  await openList(page);
   const rows = page.locator("#list .route");
   await expect(rows.first()).toBeVisible();
 
@@ -192,6 +245,7 @@ test("state and month filters narrow the list and the count", async ({ page }) =
 
 test("drive origin changes the listed drive times and is remembered", async ({ page }) => {
   await page.goto(`${PAGE}?month=any`);
+  await openList(page);
   const nums = page.locator("#list .route .nums");
   await expect(nums.first()).toContainText("from SEA");
 
@@ -206,6 +260,7 @@ test("drive origin changes the listed drive times and is remembered", async ({ p
 
 test("route list is keyboard operable: arrows move focus, Enter opens the drawer, Esc returns focus", async ({ page }) => {
   await page.goto(PAGE);
+  await openList(page);
   const rows = page.locator("#list .route");
   await expect(rows.first()).toBeVisible();
   const last = rows.last();
