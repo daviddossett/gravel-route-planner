@@ -824,6 +824,18 @@ addEventListener("DOMContentLoaded", () => {
       ? `Sunset is about ${clock(sun)} today. At this pace you'd finish after dark, so pick a faster pace, start at dawn or carry lights.`
       : `Sunset is about ${clock(sun)} today. Start by ${clock(start)} to finish with 30 minutes of daylight to spare.`;
   };
+  // Gear suggestions from the route's own data; water and food scale with the ride-time estimate.
+  const packItems = (r) => {
+    const h = rideHours(r), litres = Math.max(1, Math.ceil(h * 0.5));
+    const water = r.water === "none" ? `Carry all your water: about ${litres} L for ${hm(h)} of riding. There is none on route.`
+      : r.water === "limited" ? `${litres} L of water plus a filter or tablets. Refills here are limited.`
+      : `${litres} L of water; you can refill on route.`;
+    const items = [water, `Snacks for about ${hm(h)} of riding, plus a little extra.`, `Spare tube or plugs, pump and multitool${r.gravel >= 60 ? ". Most of this is loose surface, so bring a second tube" : ""}.`];
+    if (r.pass) items.push(`Pass: ${r.pass}.`);
+    items.push("Offline map or saved brief and a way to call for help. Signal is spotty.");
+    return items;
+  };
+  const packHTML = (r) => packItems(r).map((t) => `<li>${t}</li>`).join("");
   const waterLabel = { reliable: "Reliable", limited: "Limited", none: "None — carry it all" };
   function openDrawer(r) {
     const d = $("#drawer");
@@ -867,6 +879,7 @@ addEventListener("DOMContentLoaded", () => {
         <div>
           <h3>Why go</h3><ul>${r.highlights.map((h) => `<li>${h}</li>`).join("")}</ul>
           <h3>Watch for</h3><ul>${r.cautions.map((h) => `<li>${h}</li>`).join("")}</ul>
+          <h3>Pack for it</h3><ul id="pack">${packHTML(r)}</ul>
         </div>
       </div>`;
     d.classList.add("open"); d.inert = false;
@@ -878,6 +891,7 @@ addEventListener("DOMContentLoaded", () => {
       d.querySelectorAll("#pace button").forEach((x) => x.setAttribute("aria-pressed", x === b));
       d.querySelector("#est").textContent = rideTimeText(r);
       d.querySelector("#daylight").textContent = daylightText(r);
+      d.querySelector("#pack").innerHTML = packHTML(r);
     };
     d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
