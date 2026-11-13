@@ -353,3 +353,18 @@ test("drawer suggests a start-by time from sunset and follows the pace", async (
   await expect(sun).toContainText(/Sunset is about 4:\d\d PM today/);
   expect(errors).toEqual([]);
 });
+
+test("drawer lists what to pack, scaled to the chosen pace", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(`${PAGE}?demo`);
+  const pack = page.locator("#drawer #pack");
+  await expect(page.locator("#drawer").getByRole("heading", { name: "Pack for it" })).toBeVisible();
+  await expect(pack).toContainText(/\d+ L|water/i);
+  await expect(pack).toContainText("Signal is spotty");
+
+  await page.locator("#pace").getByRole("button", { name: "Relaxed" }).click();
+  const relaxed = await pack.textContent();
+  await page.locator("#pace").getByRole("button", { name: "Fast" }).click();
+  expect(await pack.textContent()).not.toBe(relaxed);
+  expect(errors).toEqual([]);
+});
