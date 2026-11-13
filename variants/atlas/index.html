@@ -336,6 +336,7 @@
   .ride-time { margin: 12px 0 4px; font-size: 13px; color: var(--ink-2); }
   .ride-time .seg { margin: 6px 0; max-width: 320px; }
   .ride-time .est { margin: 0; line-height: 1.4; }
+  .ride-time .est + .est { margin-top: 4px; }
   .ride-time .est b { font-family: var(--mono); font-weight: 500; color: var(--ink); }
   .btn { font: 600 13px var(--sans); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--ink); }
@@ -803,6 +804,26 @@ addEventListener("DOMContentLoaded", () => {
   };
   const hm = (h) => { const m = Math.round(h * 60); return m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m / 60}h`; };
   const rideTimeText = (r) => `About ${hm(rideHours(r))} riding at a ${pace} pace, plus ${hm(driveFrom(r).h)} driving each way from ${driveFrom(r).from.toUpperCase()}.`;
+  // Sunset from the NOAA solar approximation (no network). Times are shown in Pacific time.
+  const sunsetMinutes = (date, lat, lon) => {
+    const n = Math.round((Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) - Date.UTC(date.getFullYear(), 0, 0)) / 864e5);
+    const g = 2 * Math.PI / 365 * (n - 1), rad = Math.PI / 180;
+    const eq = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+    const dec = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+    const c = (Math.cos(90.833 * rad) - Math.sin(lat * rad) * Math.sin(dec)) / (Math.cos(lat * rad) * Math.cos(dec));
+    const ha = Math.acos(Math.max(-1, Math.min(1, c))) / rad;
+    const utc = 720 - 4 * (lon - ha) - eq;
+    const off = Number((new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", timeZoneName: "shortOffset" }).formatToParts(new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 20))).find((x) => x.type === "timeZoneName").value.replace("GMT", "")) || 0);
+    return utc + off * 60;
+  };
+  const clock = (m) => { m = Math.round(m); const h = Math.floor(m / 60) % 24, mm = String(m % 60).padStart(2, "0"); return `${(h % 12) || 12}:${mm} ${h < 12 ? "AM" : "PM"}`; };
+  const daylightText = (r) => {
+    const [lat, lon] = r.path[0], sun = sunsetMinutes(new Date(), lat, lon);
+    const start = Math.floor((sun - 30 - rideHours(r) * 60) / 5) * 5;
+    return start < 5 * 60
+      ? `Sunset is about ${clock(sun)} today. At this pace you'd finish after dark, so pick a faster pace, start at dawn or carry lights.`
+      : `Sunset is about ${clock(sun)} today. Start by ${clock(start)} to finish with 30 minutes of daylight to spare.`;
+  };
   const waterLabel = { reliable: "Reliable", limited: "Limited", none: "None — carry it all" };
   function openDrawer(r) {
     const d = $("#drawer");
@@ -821,6 +842,7 @@ addEventListener("DOMContentLoaded", () => {
         <div class="ride-time">
           <div class="seg" role="group" aria-label="Your pace" id="pace">${Object.entries(PACES).map(([k, v]) => `<button type="button" data-v="${k}" aria-pressed="${k === pace}">${v.label}</button>`).join("")}</div>
           <p class="est" id="est" aria-live="polite">${rideTimeText(r)}</p>
+          <p class="est" id="daylight">${daylightText(r)}</p>
         </div>
         <div class="actions">
           <button class="btn" id="copy">Copy ride brief</button>
@@ -855,6 +877,7 @@ addEventListener("DOMContentLoaded", () => {
       try { localStorage.setItem(PACE_KEY, pace); } catch {}
       d.querySelectorAll("#pace button").forEach((x) => x.setAttribute("aria-pressed", x === b));
       d.querySelector("#est").textContent = rideTimeText(r);
+      d.querySelector("#daylight").textContent = daylightText(r);
     };
     d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
