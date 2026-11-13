@@ -336,3 +336,20 @@ test("drawer shows a ride-time estimate that follows and remembers the chosen pa
   await expect(page.locator("#pace button[aria-pressed='true']")).toHaveText("Fast");
   expect(errors).toEqual([]);
 });
+
+test("drawer suggests a start-by time from sunset and follows the pace", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(`${PAGE}?demo`);
+  const sun = page.locator("#drawer #daylight");
+  await expect(sun).toContainText(/Sunset is about [89]:\d\d PM today\. Start by \d{1,2}:\d\d [AP]M to finish with 30 minutes/);
+  const steady = await sun.textContent();
+  await page.locator("#pace").getByRole("button", { name: "Relaxed" }).click();
+  expect(await sun.textContent()).not.toBe(steady);
+
+  await page.clock.setSystemTime(new Date("2026-12-15T12:00:00"));
+  await page.locator("#drawer .close").click();
+  await openList(page);
+  await page.locator("#list [role=option]").first().click();
+  await expect(sun).toContainText(/Sunset is about 4:\d\d PM today/);
+  expect(errors).toEqual([]);
+});
