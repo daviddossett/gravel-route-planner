@@ -336,6 +336,9 @@
   .ride-time { margin: 12px 0 4px; font-size: 13px; color: var(--ink-2); }
   .ride-time .seg { margin: 6px 0; max-width: 320px; }
   .ride-time .est { margin: 0; line-height: 1.4; }
+  .tire-fit { margin-top: 10px; }
+  .tire-fit label { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .tire-fit select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
   .ride-time .est + .est { margin-top: 4px; }
   .ride-time .est b { font-family: var(--mono); font-weight: 500; color: var(--ink); }
   .btn { font: 600 13px var(--sans); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; }
@@ -796,6 +799,16 @@ addEventListener("DOMContentLoaded", () => {
   // Rough moving-time estimate: flat speed slowed by loose surface, plus a climbing allowance.
   const PACES = { relaxed: { label: "Relaxed", mph: 10, ftPerHr: 2500 }, steady: { label: "Steady", mph: 12, ftPerHr: 3000 }, fast: { label: "Fast", mph: 14, ftPerHr: 3500 } };
   const PACE_KEY = "atlas.pace";
+  const TIRE_KEY = "atlas.tire";
+  const TIRE_SIZES = [32, 35, 38, 40, 42, 45, 50];
+  let myTire = (() => { try { const v = Number(localStorage.getItem(TIRE_KEY)); return TIRE_SIZES.includes(v) ? v : 0; } catch { return 0; } })();
+  const tireFitText = (r) => {
+    if (!myTire) return `This route wants ${r.tire} mm tires or wider. Pick yours to check the fit.`;
+    const gap = r.tire - myTire;
+    if (gap <= 0) return `Your ${myTire} mm tires are a good fit (route wants ${r.tire} mm+).`;
+    if (gap <= 3) return `Your ${myTire} mm tires are a little narrow for this route (wants ${r.tire} mm+). Doable, but run lower pressure and take it easy on rough sections.`;
+    return `Your ${myTire} mm tires are too narrow for this route (wants ${r.tire} mm+). Pick a smoother route or swap to wider tires.`;
+  };
   let pace = (() => { try { const v = localStorage.getItem(PACE_KEY); return v in PACES ? v : "steady"; } catch { return "steady"; } })();
   const rideHours = (r) => {
     const p = PACES[pace];
@@ -855,6 +868,10 @@ addEventListener("DOMContentLoaded", () => {
           <div class="seg" role="group" aria-label="Your pace" id="pace">${Object.entries(PACES).map(([k, v]) => `<button type="button" data-v="${k}" aria-pressed="${k === pace}">${v.label}</button>`).join("")}</div>
           <p class="est" id="est" aria-live="polite">${rideTimeText(r)}</p>
           <p class="est" id="daylight">${daylightText(r)}</p>
+          <div class="tire-fit">
+            <label>My tires <select id="my-tire"><option value="0">Not set</option>${TIRE_SIZES.map((t) => `<option value="${t}"${t === myTire ? " selected" : ""}>${t} mm${t === 50 ? "+" : ""}</option>`).join("")}</select></label>
+            <p class="est" id="tire-fit" aria-live="polite">${tireFitText(r)}</p>
+          </div>
         </div>
         <div class="actions">
           <button class="btn" id="copy">Copy ride brief</button>
@@ -892,6 +909,11 @@ addEventListener("DOMContentLoaded", () => {
       d.querySelector("#est").textContent = rideTimeText(r);
       d.querySelector("#daylight").textContent = daylightText(r);
       d.querySelector("#pack").innerHTML = packHTML(r);
+    };
+    d.querySelector("#my-tire").onchange = (e) => {
+      myTire = Number(e.target.value);
+      try { myTire ? localStorage.setItem(TIRE_KEY, myTire) : localStorage.removeItem(TIRE_KEY); } catch {}
+      d.querySelector("#tire-fit").textContent = tireFitText(r);
     };
     d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
