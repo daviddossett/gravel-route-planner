@@ -380,3 +380,20 @@ test("drawer links to driving directions for the route's start", async ({ page }
   await expect(link).toHaveAttribute("rel", /noopener/);
   await expect(link).toHaveAccessibleName(/Gales Creek/);
 });
+
+test("drawer checks the route against my tire width and remembers it", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(`${PAGE}?demo`);
+  const fit = page.locator("#drawer #tire-fit");
+  await expect(fit).toContainText("Pick yours to check the fit");
+
+  await page.locator("#my-tire").selectOption("50");
+  await expect(fit).toContainText("good fit");
+  await page.locator("#my-tire").selectOption("32");
+  await expect(fit).toContainText("too narrow");
+
+  await page.reload();
+  await expect(page.locator("#my-tire")).toHaveValue("32");
+  await expect(fit).toContainText("too narrow");
+  expect(errors).toEqual([]);
+});
