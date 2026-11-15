@@ -385,3 +385,19 @@ test("drawer checks the route against my tire width and remembers it", async ({ 
   await expect(fit).toContainText("too narrow");
   expect(errors).toEqual([]);
 });
+
+test("drawer downloads an offline ride brief with the pack list", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(`${PAGE}?demo`);
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#download-brief").click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/-ride-brief\.txt$/);
+  const text = require("fs").readFileSync(await download.path(), "utf8");
+  expect(text).toContain("Pack for it:");
+  expect(text).toContain("Signal is spotty");
+  expect(text).toContain("Water:");
+  await expect(page.locator("#toast")).toContainText("saved");
+  expect(errors).toEqual([]);
+});

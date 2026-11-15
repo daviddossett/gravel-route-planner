@@ -897,6 +897,7 @@ addEventListener("DOMContentLoaded", () => {
           <h3>Why go</h3><ul>${r.highlights.map((h) => `<li>${h}</li>`).join("")}</ul>
           <h3>Watch for</h3><ul>${r.cautions.map((h) => `<li>${h}</li>`).join("")}</ul>
           <h3>Pack for it</h3><ul id="pack">${packHTML(r)}</ul>
+          <button class="btn ghost" id="download-brief" type="button" style="margin-top:8px">Download brief for offline (.txt)</button>
         </div>
       </div>`;
     d.classList.add("open"); d.inert = false;
@@ -917,6 +918,7 @@ addEventListener("DOMContentLoaded", () => {
     };
     d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
+    d.querySelector("#download-brief").onclick = () => downloadBrief(r);
     d.querySelector("#save").onclick = (e) => {
       const on = !saved.has(r.id);
       on ? saved.add(r.id) : saved.delete(r.id);
@@ -956,9 +958,18 @@ addEventListener("DOMContentLoaded", () => {
     }
     return runs.join(", ");
   }
-  function copyBrief(r) {
-    const text = `${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]} · ${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nEst. riding time: ${hm(rideHours(r))} (${pace} pace)\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\nMap: ${shareUrl()}\n(Sample data — verify before riding.)`;
-    copyText(text, "Ride brief copied. Go get dusty.");
+  function briefText(r) {
+    return `${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]} · ${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nEst. riding time: ${hm(rideHours(r))} (${pace} pace)\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\nMap: ${shareUrl()}\n(Sample data — verify before riding.)`;
+  }
+  function copyBrief(r) { copyText(briefText(r), "Ride brief copied. Go get dusty."); }
+  // A plain-text file works with no signal: brief plus pack list, saved to the phone.
+  function downloadBrief(r) {
+    const text = `${briefText(r)}\n\nPack for it:\n${packItems(r).map((t) => `- ${t}`).join("\n")}\n`;
+    const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: `${r.id}-ride-brief.txt` });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast("Ride brief saved. It works without signal.");
   }
   function copyText(text, msg) {
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast(msg), () => toast("Couldn't access the clipboard"));
