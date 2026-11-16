@@ -428,3 +428,18 @@ test("drawer compares the route with another and keeps the lower value marked", 
   await expect(out).toBeEmpty();
   expect(errors).toEqual([]);
 });
+
+test("drawer copies a ride plan for a friend using the chosen start time", async ({ page, context }) => {
+  const errors = watchErrors(page);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(`${PAGE}?demo`);
+  await page.locator("#plan-start").fill("08:00");
+  await page.locator("#copy-plan").click();
+  await expect(page.locator("#toast")).toContainText("Ride plan copied");
+  const text = await page.evaluate(() => navigator.clipboard.readText());
+  expect(text).toContain("around 8:00 AM");
+  expect(text).toContain("Expect me back by about");
+  expect(text).toContain("google.com/maps/dir");
+  expect(text).toContain("haven't heard from me");
+  expect(errors).toEqual([]);
+});

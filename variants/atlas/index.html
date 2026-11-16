@@ -343,6 +343,9 @@
   .compare th, .compare td { text-align: left; padding: 3px 6px 3px 0; border-bottom: 1px solid var(--line); font-weight: 400; }
   .compare thead th { color: var(--ink-2); font-weight: 600; }
   .compare td.better { font-weight: 600; color: var(--ink); }
+  .plan { margin-top: 10px; }
+  .plan label { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+  .plan input { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
   .tire-fit { margin-top: 10px; }
   .tire-fit label { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .tire-fit select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
@@ -838,8 +841,9 @@ addEventListener("DOMContentLoaded", () => {
     return utc + off * 60;
   };
   const clock = (m) => { m = Math.round(m); const h = Math.floor(m / 60) % 24, mm = String(m % 60).padStart(2, "0"); return `${(h % 12) || 12}:${mm} ${h < 12 ? "AM" : "PM"}`; };
+  const sunsetFor = (r) => sunsetMinutes(new Date(), ...r.path[0]);
   const daylightText = (r) => {
-    const [lat, lon] = r.path[0], sun = sunsetMinutes(new Date(), lat, lon);
+    const sun = sunsetFor(r);
     const start = Math.floor((sun - 30 - rideHours(r) * 60) / 5) * 5;
     return start < 5 * 60
       ? `Sunset is about ${clock(sun)} today. At this pace you'd finish after dark, so pick a faster pace, start at dawn or carry lights.`
@@ -855,6 +859,16 @@ addEventListener("DOMContentLoaded", () => {
     if (r.pass) items.push(`Pass: ${r.pass}.`);
     items.push("Offline map or saved brief and a way to call for help. Signal is spotty.");
     return items;
+  };
+  // A note to leave with someone who isn't riding: where, when, and when to worry. Fits a text message.
+  const planStart = (r) => {
+    const latest = Math.floor((sunsetFor(r) - 30 - rideHours(r) * 60) / 5) * 5;
+    return latest >= 5 * 60 ? Math.min(latest, 9 * 60) : 7 * 60;
+  };
+  const toTimeValue = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const planText = (r, startMin) => {
+    const back = startMin + rideHours(r) * 60;
+    return `Ride plan: ${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]}, ${r.miles} mi, about ${hm(rideHours(r))} of riding.\nStarting from ${r.start} around ${clock(startMin)}. Expect me back by about ${clock(back)}; sunset is about ${clock(sunsetFor(r))}.\nTrailhead: ${directionsUrl(r)}\nIf you haven't heard from me by ${clock(back + 120)}, please try calling me, then call the county sheriff's non-emergency line. Cell signal is spotty out there.\n(Sample route data, so treat the times as estimates.)`;
   };
   // Opens the phone's maps app or Google Maps with the trailhead as the destination. No API key needed.
   const directionsUrl = (r) => `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${r.path[0].join(",")}`;
@@ -896,6 +910,10 @@ addEventListener("DOMContentLoaded", () => {
             <label>My tires <select id="my-tire"><option value="0">Not set</option>${TIRE_SIZES.map((t) => `<option value="${t}"${t === myTire ? " selected" : ""}>${t} mm${t === 50 ? "+" : ""}</option>`).join("")}</select></label>
             <p class="est" id="tire-fit" aria-live="polite">${tireFitText(r)}</p>
           </div>
+        </div>
+        <div class="plan">
+          <label>Start time <input type="time" id="plan-start" value="${toTimeValue(planStart(r))}"></label>
+          <button class="btn ghost" id="copy-plan" type="button">Copy ride plan for a friend</button>
         </div>
         <div class="actions">
           <button class="btn" id="copy">Copy ride brief</button>
@@ -951,6 +969,11 @@ addEventListener("DOMContentLoaded", () => {
     };
     d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
+    d.querySelector("#copy-plan").onclick = () => {
+      const [h, m] = d.querySelector("#plan-start").value.split(":").map(Number);
+      if (Number.isNaN(h) || Number.isNaN(m)) return toast("Pick a start time first");
+      copyText(planText(r, h * 60 + m), "Ride plan copied. Send it to someone who'll miss you.");
+    };
     d.querySelector("#download-brief").onclick = () => downloadBrief(r);
     d.querySelector("#save").onclick = (e) => {
       const on = !saved.has(r.id);
