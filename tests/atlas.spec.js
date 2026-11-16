@@ -413,3 +413,18 @@ test("drawer downloads an offline ride brief with the pack list", async ({ page 
   await expect(page.locator("#toast")).toContainText("saved");
   expect(errors).toEqual([]);
 });
+
+test("drawer compares the route with another and keeps the lower value marked", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(`${PAGE}?demo`);
+  const out = page.locator("#drawer #compare-out");
+  await expect(out).toBeEmpty();
+  await expect(page.locator("#compare-with option[value]:not([value=''])").first()).toBeAttached();
+  const other = await page.locator("#compare-with option").nth(1).getAttribute("value");
+  await page.locator("#compare-with").selectOption(other);
+  await expect(out.locator("tbody tr")).toHaveCount(7);
+  await expect(out.locator("tbody th").first()).toHaveText("Distance");
+  await page.locator("#compare-with").selectOption("");
+  await expect(out).toBeEmpty();
+  expect(errors).toEqual([]);
+});
