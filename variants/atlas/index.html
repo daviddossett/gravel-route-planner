@@ -336,6 +336,13 @@
   .ride-time { margin: 12px 0 4px; font-size: 13px; color: var(--ink-2); }
   .ride-time .seg { margin: 6px 0; max-width: 320px; }
   .ride-time .est { margin: 0; line-height: 1.4; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .compare label { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 13px; }
+  .compare select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; min-width: 0; max-width: 100%; }
+  .compare table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+  .compare th, .compare td { text-align: left; padding: 3px 6px 3px 0; border-bottom: 1px solid var(--line); font-weight: 400; }
+  .compare thead th { color: var(--ink-2); font-weight: 600; }
+  .compare td.better { font-weight: 600; color: var(--ink); }
   .tire-fit { margin-top: 10px; }
   .tire-fit label { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .tire-fit select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
@@ -851,6 +858,20 @@ addEventListener("DOMContentLoaded", () => {
   };
   // Opens the phone's maps app or Google Maps with the trailhead as the destination. No API key needed.
   const directionsUrl = (r) => `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${r.path[0].join(",")}`;
+  // Side-by-side numbers for two routes; the better value in each row is bolded and marked for screen readers.
+  const compareRows = (a, b) => {
+    const da = driveFrom(a).h, db = driveFrom(b).h;
+    return [
+      ["Distance", `${a.miles} mi`, `${b.miles} mi`, a.miles - b.miles],
+      ["Climbing", `${fmt(a.gain)} ft`, `${fmt(b.gain)} ft`, a.gain - b.gain],
+      ["Gravel", `${a.gravel}%`, `${b.gravel}%`, 0],
+      ["Tires", `${a.tire} mm+`, `${b.tire} mm+`, a.tire - b.tire],
+      ["Riding time", hm(rideHours(a)), hm(rideHours(b)), rideHours(a) - rideHours(b)],
+      ["Drive each way", hm(da), hm(db), da - db],
+      ["Fun type", FUN[a.difficulty], FUN[b.difficulty], 0],
+    ];
+  };
+  const compareHTML = (a, b) => `<table><caption class="sr-only">Comparison of ${a.name} and ${b.name}</caption><thead><tr><th scope="col">Compare</th><th scope="col">This route</th><th scope="col">${b.name}</th></tr></thead><tbody>${compareRows(a, b).map(([k, x, y, d]) => `<tr><th scope="row">${k}</th><td${d < 0 ? ' class="better"' : ""}>${x}${d < 0 ? ' <span class="sr-only">(lower)</span>' : ""}</td><td${d > 0 ? ' class="better"' : ""}>${y}${d > 0 ? ' <span class="sr-only">(lower)</span>' : ""}</td></tr>`).join("")}</tbody></table><p class="est">Bold is the lower number. Rough sample data, so treat small gaps as a tie.</p>`;
   const packHTML = (r) => packItems(r).map((t) => `<li>${t}</li>`).join("");
   const waterLabel = { reliable: "Reliable", limited: "Limited", none: "None — carry it all" };
   function openDrawer(r) {
@@ -899,6 +920,11 @@ addEventListener("DOMContentLoaded", () => {
         <div>
           <h3>Why go</h3><ul>${r.highlights.map((h) => `<li>${h}</li>`).join("")}</ul>
           <h3>Watch for</h3><ul>${r.cautions.map((h) => `<li>${h}</li>`).join("")}</ul>
+          <div class="compare">
+            <h3>Compare</h3>
+            <label>Compare with <select id="compare-with"><option value="">Pick a route</option>${ROUTES.filter((x) => x.id !== r.id).map((x) => `<option value="${x.id}">${x.name}</option>`).join("")}</select></label>
+            <div id="compare-out" aria-live="polite"></div>
+          </div>
           <h3>Pack for it</h3><ul id="pack">${packHTML(r)}</ul>
           <button class="btn ghost" id="download-brief" type="button" style="margin-top:8px">Download brief for offline (.txt)</button>
         </div>
@@ -918,6 +944,10 @@ addEventListener("DOMContentLoaded", () => {
       myTire = Number(e.target.value);
       try { myTire ? localStorage.setItem(TIRE_KEY, myTire) : localStorage.removeItem(TIRE_KEY); } catch {}
       d.querySelector("#tire-fit").textContent = tireFitText(r);
+    };
+    d.querySelector("#compare-with").onchange = (e) => {
+      const other = ROUTES.find((x) => x.id === e.target.value);
+      d.querySelector("#compare-out").innerHTML = other ? compareHTML(r, other) : "";
     };
     d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
