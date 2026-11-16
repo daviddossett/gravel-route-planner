@@ -369,6 +369,18 @@ test("drawer lists what to pack, scaled to the chosen pace", async ({ page }) =>
   expect(errors).toEqual([]);
 });
 
+test("drawer links to driving directions for the route's start", async ({ page }) => {
+  await page.goto(`${PAGE}?route=gales-creek`);
+  const link = page.locator("#drawer #directions");
+  await expect(link).toBeVisible();
+  const href = await link.getAttribute("href");
+  expect(href).toContain("https://www.google.com/maps/dir/?api=1");
+  expect(href).toContain("destination=45.594,-123.199");
+  await expect(link).toHaveAttribute("target", "_blank");
+  await expect(link).toHaveAttribute("rel", /noopener/);
+  await expect(link).toHaveAccessibleName(/Gales Creek/);
+});
+
 test("drawer checks the route against my tire width and remembers it", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto(`${PAGE}?demo`);

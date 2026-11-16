@@ -353,6 +353,7 @@
   .detail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; line-height: 1.4; }
   .detail dt { color: var(--ink-2); }
   .detail dd { margin: 0; }
+  .dir-link { color: var(--forest); text-decoration: underline; white-space: nowrap; }
   .detail ul { margin: 0; padding-left: 16px; font-size: 13px; line-height: 1.5; }
   .detail h3 { margin: 4px 0 2px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
   .close { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; border: 0; background: transparent; font-size: 20px; color: var(--ink-2); cursor: pointer; border-radius: 4px; }
@@ -848,6 +849,8 @@ addEventListener("DOMContentLoaded", () => {
     items.push("Offline map or saved brief and a way to call for help. Signal is spotty.");
     return items;
   };
+  // Opens the phone's maps app or Google Maps with the trailhead as the destination. No API key needed.
+  const directionsUrl = (r) => `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${r.path[0].join(",")}`;
   const packHTML = (r) => packItems(r).map((t) => `<li>${t}</li>`).join("");
   const waterLabel = { reliable: "Reliable", limited: "Limited", none: "None — carry it all" };
   function openDrawer(r) {
@@ -886,7 +889,7 @@ addEventListener("DOMContentLoaded", () => {
         <dl>
           <dt>Fun type</dt><dd><span class="fun f${r.difficulty}" style="margin:0">${FUN[r.difficulty]}</span></dd>
           <dt>Route type</dt><dd>${TYPE[r.type]}. ${TYPE_NOTE[r.type]}</dd>
-          <dt>Start</dt><dd>${r.start}</dd>
+          <dt>Start</dt><dd>${r.start} · <a class="dir-link" id="directions" href="${directionsUrl(r)}" target="_blank" rel="noopener" aria-label="Driving directions to ${r.start}, opens in a new tab">Driving directions ↗</a></dd>
           <dt>Surface</dt><dd>${r.surface}</dd>
           <dt>Water</dt><dd>${waterLabel[r.water]}. ${r.waterNote}</dd>
           <dt>Pass</dt><dd>${r.pass || "None needed"}</dd>
