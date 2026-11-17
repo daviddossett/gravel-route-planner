@@ -394,6 +394,14 @@ test("drawer links to the weather forecast for the route's start", async ({ page
   await expect(link).toHaveAccessibleName(/Gales Creek/);
 });
 
+test("drawer links meet the 24px minimum target height", async ({ page }) => {
+  await page.goto(`${PAGE}?route=gales-creek`);
+  for (const id of ["#directions", "#forecast"]) {
+    const box = await page.locator(`#drawer ${id}`).boundingBox();
+    expect(box.height).toBeGreaterThanOrEqual(24);
+  }
+});
+
 test("drawer checks the route against my tire width and remembers it", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto(`${PAGE}?demo`);
