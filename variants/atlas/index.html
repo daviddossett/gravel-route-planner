@@ -871,6 +871,7 @@ addEventListener("DOMContentLoaded", () => {
     return `Ride plan: ${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]}, ${r.miles} mi, about ${hm(rideHours(r))} of riding.\nStarting from ${r.start} around ${clock(startMin)}. Expect me back by about ${clock(back)}; sunset is about ${clock(sunsetFor(r))}.\nTrailhead: ${directionsUrl(r)}\nIf you haven't heard from me by ${clock(back + 120)}, please try calling me, then call the county sheriff's non-emergency line. Cell signal is spotty out there.\n(Sample route data, so treat the times as estimates.)`;
   };
   // Opens the phone's maps app or Google Maps with the trailhead as the destination. No API key needed.
+  const forecastUrl = (r) => `https://forecast.weather.gov/MapClick.php?lat=${r.path[0][0]}&lon=${r.path[0][1]}`;
   const directionsUrl = (r) => `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${r.path[0].join(",")}`;
   // Side-by-side numbers for two routes; the better value in each row is bolded and marked for screen readers.
   const compareRows = (a, b) => {
@@ -929,6 +930,7 @@ addEventListener("DOMContentLoaded", () => {
           <dt>Fun type</dt><dd><span class="fun f${r.difficulty}" style="margin:0">${FUN[r.difficulty]}</span></dd>
           <dt>Route type</dt><dd>${TYPE[r.type]}. ${TYPE_NOTE[r.type]}</dd>
           <dt>Start</dt><dd>${r.start} · <a class="dir-link" id="directions" href="${directionsUrl(r)}" target="_blank" rel="noopener" aria-label="Driving directions to ${r.start}, opens in a new tab">Driving directions ↗</a></dd>
+          <dt>Forecast</dt><dd><a class="dir-link" id="forecast" href="${forecastUrl(r)}" target="_blank" rel="noopener" aria-label="Check the forecast near ${r.start}, opens in a new tab">Check the forecast ↗</a></dd>
           <dt>Surface</dt><dd>${r.surface}</dd>
           <dt>Water</dt><dd>${waterLabel[r.water]}. ${r.waterNote}</dd>
           <dt>Pass</dt><dd>${r.pass || "None needed"}</dd>
