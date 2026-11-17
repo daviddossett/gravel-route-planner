@@ -827,6 +827,12 @@ addEventListener("DOMContentLoaded", () => {
     return Math.round(h * 4) / 4;
   };
   const hm = (h) => { const m = Math.round(h * 60); return m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m / 60}h`; };
+  // Climbing per mile from the stated stats: a better sense of effort than total gain alone.
+  const climbFeelText = (r) => {
+    const perMile = Math.round(r.gain / r.miles);
+    const feel = perMile < 60 ? "Mellow" : perMile < 90 ? "Rolling" : perMile < 110 ? "Hilly" : "Steep";
+    return `Climbing feel: <b>${feel}</b>, about ${perMile} ft of climbing per mile.`;
+  };
   const rideTimeText = (r) => `About ${hm(rideHours(r))} riding at a ${pace} pace, plus ${hm(driveFrom(r).h)} driving each way from ${driveFrom(r).from.toUpperCase()}.`;
   // Sunset from the NOAA solar approximation (no network). Times are shown in Pacific time.
   const sunsetMinutes = (date, lat, lon) => {
@@ -907,6 +913,7 @@ addEventListener("DOMContentLoaded", () => {
           <div class="seg" role="group" aria-label="Your pace" id="pace">${Object.entries(PACES).map(([k, v]) => `<button type="button" data-v="${k}" aria-pressed="${k === pace}">${v.label}</button>`).join("")}</div>
           <p class="est" id="est" aria-live="polite">${rideTimeText(r)}</p>
           <p class="est" id="daylight">${daylightText(r)}</p>
+          <p class="est" id="climb-feel">${climbFeelText(r)}</p>
           <div class="tire-fit">
             <label>My tires <select id="my-tire"><option value="0">Not set</option>${TIRE_SIZES.map((t) => `<option value="${t}"${t === myTire ? " selected" : ""}>${t} mm${t === 50 ? "+" : ""}</option>`).join("")}</select></label>
             <p class="est" id="tire-fit" aria-live="polite">${tireFitText(r)}</p>

@@ -394,6 +394,12 @@ test("drawer links to the weather forecast for the route's start", async ({ page
   await expect(link).toHaveAccessibleName(/Gales Creek/);
 });
 
+test("drawer describes climbing per mile from the route's stats", async ({ page }) => {
+  await page.goto(`${PAGE}?route=gales-creek`);
+  // 4,300 ft over 42 mi is about 102 ft per mile
+  await expect(page.locator("#drawer #climb-feel")).toHaveText("Climbing feel: Hilly, about 102 ft of climbing per mile.");
+});
+
 test("drawer checks the route against my tire width and remembers it", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto(`${PAGE}?demo`);
