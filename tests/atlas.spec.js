@@ -400,6 +400,14 @@ test("drawer describes climbing per mile from the route's stats", async ({ page 
   await expect(page.locator("#drawer #climb-feel")).toHaveText("Climbing feel: Hilly, about 102 ft of climbing per mile.");
 });
 
+test("drawer links meet the 24px minimum target height", async ({ page }) => {
+  await page.goto(`${PAGE}?route=gales-creek`);
+  for (const id of ["#directions", "#forecast"]) {
+    const box = await page.locator(`#drawer ${id}`).boundingBox();
+    expect(box.height).toBeGreaterThanOrEqual(24);
+  }
+});
+
 test("drawer checks the route against my tire width and remembers it", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto(`${PAGE}?demo`);
