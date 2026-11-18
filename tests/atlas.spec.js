@@ -127,6 +127,11 @@ test("sort control reorders the route list", async ({ page }) => {
 
   await page.locator("#sort").selectOption("drive");
   expect(await miles()).not.toEqual(byMiles);
+
+  await page.locator("#sort").selectOption("gravel");
+  const gravel = await page.evaluate(() => [...document.querySelectorAll("#list .route")].map((r) => r.dataset.id));
+  const pct = await page.evaluate((ids) => ids.map((id) => window.PNW_ROUTES.find((r) => r.id === id).gravel), gravel);
+  expect(pct).toEqual([...pct].sort((a, b) => b - a));
 });
 
 test("on phones the route list is a toggleable overlay over a full-height map", async ({ page }) => {
