@@ -577,6 +577,20 @@ test("marking a route as ridden tags it, persists, and Not ridden yet hides it",
   expect(await rows.count()).toBeGreaterThan(total - 1);
 });
 
+test("empty state offers one-step loosening with counts and applies it", async ({ page }) => {
+  await page.goto(PAGE);
+  await openList(page);
+  await page.locator("#dist").fill("25");
+  await page.locator("#grav").fill("90");
+  await expect(page.locator("#empty")).toBeVisible();
+  const hint = page.locator("#empty-hints button").first();
+  await expect(hint).toHaveText(/\(\d+ routes?\)/);
+  await hint.click();
+  await expect(page.locator("#empty")).toBeHidden();
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  await expect(page.locator("#list .route[tabindex='0']")).toBeFocused();
+});
+
 test("link-preview image URLs are absolute", async ({ page }) => {
   await page.goto(PAGE);
   for (const sel of ['meta[property="og:image"]', 'meta[name="twitter:image"]', 'meta[property="og:url"]']) {
