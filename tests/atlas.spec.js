@@ -590,3 +590,10 @@ test("empty state offers one-step loosening with counts and applies it", async (
   await expect(page.locator("#list .route").first()).toBeVisible();
   await expect(page.locator("#list .route[tabindex='0']")).toBeFocused();
 });
+
+test("link-preview image URLs are absolute", async ({ page }) => {
+  await page.goto(PAGE);
+  for (const sel of ['meta[property="og:image"]', 'meta[name="twitter:image"]', 'meta[property="og:url"]']) {
+    await expect(page.locator(sel)).toHaveAttribute("content", /^https:\/\//);
+  }
+});
