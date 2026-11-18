@@ -505,6 +505,7 @@
 
     <div class="list-head"><span id="count" aria-live="polite"></span>
       <button type="button" class="saved-toggle" id="saved-toggle" aria-pressed="false" hidden></button>
+      <button type="button" class="saved-toggle" id="ridden-toggle" aria-pressed="false" hidden></button>
       <label class="sort">Sort <select id="sort">
         <option value="drive">Closest drive</option>
         <option value="miles">Shortest distance</option>
@@ -549,7 +550,10 @@ addEventListener("DOMContentLoaded", () => {
   const SAVED_KEY = "atlas.saved";
   const saved = new Set((() => { try { const v = JSON.parse(localStorage.getItem(SAVED_KEY)); return Array.isArray(v) ? v : []; } catch { return []; } })());
   const persistSaved = () => { try { localStorage.setItem(SAVED_KEY, JSON.stringify([...saved])); } catch {} };
-  let savedOnly = false;
+  const RIDDEN_KEY = "atlas.ridden";
+  const ridden = new Set((() => { try { const v = JSON.parse(localStorage.getItem(RIDDEN_KEY)); return Array.isArray(v) ? v : []; } catch { return []; } })());
+  const persistRidden = () => { try { localStorage.setItem(RIDDEN_KEY, JSON.stringify([...ridden])); } catch {} };
+  let savedOnly = false, hideRidden = false;
   let selected = null;
   let active = null; // the one route row in the tab order (roving tabindex)
   let returnTo = null; // where focus goes when the drawer closes
@@ -594,8 +598,9 @@ addEventListener("DOMContentLoaded", () => {
   };
   let sortKey = "drive";
   $("#sort").addEventListener("change", (e) => { sortKey = e.target.value; render(); });
-  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); savedOnly = false; saveOrigin(); render(); };
+  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); savedOnly = false; hideRidden = false; saveOrigin(); render(); };
   $("#saved-toggle").addEventListener("click", () => { savedOnly = !savedOnly; render(); });
+  $("#ridden-toggle").addEventListener("click", () => { hideRidden = !hideRidden; render(); });
   $("#reset").addEventListener("click", resetFilters);
   $("#reset2").addEventListener("click", resetFilters);
 
@@ -637,6 +642,7 @@ addEventListener("DOMContentLoaded", () => {
     if (f.month && !r.months.includes(f.month)) return false;
     if (f.state !== "all" && r.state !== f.state) return false;
     if (savedOnly && !saved.has(r.id)) return false;
+    if (hideRidden && ridden.has(r.id)) return false;
     if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav) return false;
     return f.drive >= 7 || driveFrom(r).h <= f.drive; // 7 h = "any"
   }
@@ -665,6 +671,12 @@ addEventListener("DOMContentLoaded", () => {
     toggle.hidden = !known;
     toggle.textContent = `Saved (${known})`;
     toggle.setAttribute("aria-pressed", savedOnly);
+    const riddenKnown = ROUTES.filter((r) => ridden.has(r.id)).length;
+    if (!riddenKnown) hideRidden = false;
+    const rt = $("#ridden-toggle");
+    rt.hidden = !riddenKnown;
+    rt.textContent = "Not ridden yet";
+    rt.setAttribute("aria-pressed", hideRidden);
     const shown = ROUTES.filter(matches).sort(SORTS[sortKey]);
     $("#count").textContent = `${shown.length} of ${ROUTES.length} routes`;
 
@@ -681,7 +693,7 @@ addEventListener("DOMContentLoaded", () => {
       const d = driveFrom(r);
       el.innerHTML = `<h2>${r.name}</h2>
         <div class="nums"><b>${r.miles}</b> mi · <b>${fmt(r.gain)}</b> ft<br>${r.gravel}% gravel<br>${d.h}h from ${d.from.toUpperCase()}</div>
-        <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span>${saved.has(r.id) ? ' <span class="saved-tag">★ Saved</span>' : ""}</div>`;
+        <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span>${saved.has(r.id) ? ' <span class="saved-tag">★ Saved</span>' : ""}${ridden.has(r.id) ? ' <span class="saved-tag">✓ Ridden</span>' : ""}</div>`;
       el.addEventListener("click", () => select(r.id, true, true));
       el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(r.id, true, true); } });
       el.addEventListener("mouseenter", () => hover(r.id, true));
@@ -926,6 +938,7 @@ addEventListener("DOMContentLoaded", () => {
         <div class="actions">
           <button class="btn" id="copy">Copy ride brief</button>
           <button class="btn ghost" id="save" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save for later"}</button>
+          <button class="btn ghost" id="ridden" type="button" aria-pressed="${ridden.has(r.id)}">${ridden.has(r.id) ? "✓ Ridden" : "Mark as ridden"}</button>
           <button class="btn ghost" id="copy-link">Copy link</button>
           <button class="btn ghost" id="zoom">Zoom to route</button>
         </div>
@@ -991,6 +1004,15 @@ addEventListener("DOMContentLoaded", () => {
       e.currentTarget.setAttribute("aria-pressed", on);
       e.currentTarget.textContent = on ? "★ Saved" : "☆ Save for later";
       toast(on ? "Saved. Find it under Saved in the route list." : "Removed from saved.");
+      render();
+    };
+    d.querySelector("#ridden").onclick = (e) => {
+      const on = !ridden.has(r.id);
+      on ? ridden.add(r.id) : ridden.delete(r.id);
+      persistRidden();
+      e.currentTarget.setAttribute("aria-pressed", on);
+      e.currentTarget.textContent = on ? "✓ Ridden" : "Mark as ridden";
+      toast(on ? "Marked as ridden. Use Not ridden yet in the list to find something new." : "Removed from ridden.");
       render();
     };
     d.querySelector("#copy-link").onclick = () => copyText(shareUrl(), "Link copied. Paste it in the club chat.");

@@ -470,3 +470,30 @@ test("drawer copies a ride plan for a friend using the chosen start time", async
   expect(text).toContain("haven't heard from me");
   expect(errors).toEqual([]);
 });
+
+test("marking a route as ridden tags it, persists, and Not ridden yet hides it", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeAttached();
+  const total = await rows.count();
+  await expect(page.locator("#ridden-toggle")).toBeHidden();
+
+  const ridden = page.locator("#ridden");
+  await expect(ridden).toHaveAttribute("aria-pressed", "false");
+  await ridden.click();
+  await expect(ridden).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#list .saved-tag", { hasText: "Ridden" })).toHaveCount(1);
+
+  await page.reload();
+  const toggle = page.locator("#ridden-toggle");
+  await page.keyboard.press("Escape"); // close the route drawer
+  await openList(page);
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(rows).toHaveCount(total - 1);
+
+  await page.locator("#reset").click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  expect(await rows.count()).toBeGreaterThan(total - 1);
+});
