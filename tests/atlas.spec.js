@@ -576,3 +576,10 @@ test("marking a route as ridden tags it, persists, and Not ridden yet hides it",
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
   expect(await rows.count()).toBeGreaterThan(total - 1);
 });
+
+test("link-preview image URLs are absolute", async ({ page }) => {
+  await page.goto(PAGE);
+  for (const sel of ['meta[property="og:image"]', 'meta[name="twitter:image"]', 'meta[property="og:url"]']) {
+    await expect(page.locator(sel)).toHaveAttribute("content", /^https:\/\//);
+  }
+});
