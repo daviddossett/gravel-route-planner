@@ -471,6 +471,31 @@ test("drawer copies a ride plan for a friend using the chosen start time", async
   expect(errors).toEqual([]);
 });
 
+test("distance and climbing sliders narrow the list, update the count and land in the URL", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeVisible();
+  const total = await rows.count();
+
+  await page.locator("#dist").fill("40");
+  await expect(page.locator("#dist-out")).toContainText("40");
+  await expect(rows).not.toHaveCount(total);
+  const n = await rows.count();
+  expect(n).toBeLessThan(total);
+  await expect(page.locator("#count")).toHaveText(new RegExp(`^${n} of ${total} routes$`));
+  await expect.poll(() => new URL(page.url()).searchParams.get("dist")).toBe("40");
+
+  await page.locator("#gain").fill("3000");
+  await expect.poll(() => new URL(page.url()).searchParams.get("gain")).toBe("3000");
+  await expect.poll(() => rows.count()).toBeLessThanOrEqual(n);
+
+  await page.locator("#dist").fill("70");
+  await page.locator("#gain").fill("6000");
+  await expect(rows).toHaveCount(total);
+  await expect.poll(() => new URL(page.url()).searchParams.has("dist")).toBe(false);
+});
+
 test("Copy link puts a shareable URL with the route and filters on the clipboard", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto(`${PAGE}?route=klickitat&month=any&origin=pdx&state=WA`);
