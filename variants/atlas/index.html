@@ -290,6 +290,9 @@
   .route .nums { grid-row: 1 / span 2; grid-column: 2; text-align: right; font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--ink-2); }
   .route .nums b { color: var(--ink); font-weight: 500; }
   .empty { flex: 1; padding: 28px 22px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+  .empty #empty-hints p { margin: 12px 0 6px; }
+  .empty #empty-hints ul { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+  .empty #empty-hints button { text-decoration: none; padding: 6px 10px; min-height: 28px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
   .empty button { font: inherit; color: var(--forest); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
   .disclaimer { padding: 10px 22px 12px; font-size: 12px; line-height: 1.4; color: var(--ink-2); border-top: 1px solid var(--line); background: var(--paper-2); }
 
@@ -515,7 +518,8 @@
       </select></label>
       <button id="reset">Reset filters</button></div>
     <div class="list" id="list" role="listbox" aria-label="Matching routes"></div>
-    <div class="empty" id="empty" hidden>Nothing out there fits all of that. Even the cows are confused. Try another month or <button type="button" id="reset2">reset filters</button>.</div>
+    <div class="empty" id="empty" hidden>Nothing out there fits all of that. Even the cows are confused. Try another month or <button type="button" id="reset2">reset filters</button>.
+      <div id="empty-hints" hidden><p>Or loosen just one thing:</p><ul></ul></div></div>
     <p class="disclaimer">Sample data. Lines and stats are approximate — confirm closures, passes, and fire restrictions with the land manager before you ride.</p>
   </aside>
 
@@ -603,6 +607,11 @@ addEventListener("DOMContentLoaded", () => {
   $("#ridden-toggle").addEventListener("click", () => { hideRidden = !hideRidden; render(); });
   $("#reset").addEventListener("click", resetFilters);
   $("#reset2").addEventListener("click", resetFilters);
+  $("#empty-hints").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-i]"); if (!b) return;
+    LOOSEN[+b.dataset.i][2](); render();
+    const next = $("#list .route[tabindex='0']"); if (next) next.focus({ preventScroll: true });
+  });
 
   // Theme picker
   const themeEl = $("#theme");
@@ -647,6 +656,31 @@ addEventListener("DOMContentLoaded", () => {
     return f.drive >= 7 || driveFrom(r).h <= f.drive; // 7 h = "any"
   }
 
+  // Single-filter relaxations offered when nothing matches, best first.
+  const LOOSEN = [
+    ["Any month", () => f.month, () => { f.month = 0; }],
+    ["Both states", () => f.state !== "all", () => { f.state = "all"; }],
+    ["Any distance", () => f.dist < 70, () => { f.dist = 70; }],
+    ["Any climbing", () => f.gain < 6000, () => { f.gain = 6000; }],
+    ["Any gravel share", () => f.grav > 0, () => { f.grav = 0; }],
+    ["Any drive time", () => f.drive < 7, () => { f.drive = 7; }],
+    ["All routes, not just saved", () => savedOnly, () => { savedOnly = false; }],
+    ["Include ridden routes", () => hideRidden, () => { hideRidden = false; }],
+  ];
+  function looseningHints() {
+    const snap = () => [{ ...f }, savedOnly, hideRidden];
+    const [f0, s0, h0] = snap();
+    const hints = [];
+    LOOSEN.forEach(([label, active, relax], i) => {
+      if (!active()) return;
+      relax();
+      const n = ROUTES.filter(matches).length;
+      Object.assign(f, f0); savedOnly = s0; hideRidden = h0;
+      if (n) hints.push({ label, n, i });
+    });
+    return hints.sort((a, b) => b.n - a.n).slice(0, 4);
+  }
+
   // Drive hours from the chosen city; for "any", the shorter drive and which city it's from.
   function driveFrom(r) {
     const from = f.origin === "any" ? (r.drive.sea <= r.drive.pdx ? "sea" : "pdx") : f.origin;
@@ -686,6 +720,10 @@ addEventListener("DOMContentLoaded", () => {
     list.innerHTML = "";
     list.hidden = !shown.length;
     $("#empty").hidden = !!shown.length;
+    const hintBox = $("#empty-hints");
+    const hints = shown.length ? [] : looseningHints();
+    hintBox.hidden = !hints.length;
+    hintBox.querySelector("ul").innerHTML = hints.map((h) => `<li><button type="button" data-i="${h.i}">${h.label} (${h.n} ${h.n === 1 ? "route" : "routes"})</button></li>`).join("");
     shown.forEach((r) => {
       const el = document.createElement("div");
       el.className = "route"; el.tabIndex = r.id === active ? 0 : -1; el.setAttribute("role", "option"); el.dataset.id = r.id;
