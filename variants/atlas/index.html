@@ -1008,6 +1008,7 @@ addEventListener("DOMContentLoaded", () => {
           </div>
           <h3>Pack for it</h3><ul id="pack">${packHTML(r)}</ul>
           <button class="btn ghost" id="download-brief" type="button" style="margin-top:8px">Download brief for offline (.txt)</button>
+          <button class="btn ghost" id="download-gpx" type="button" style="margin-top:8px">Download route (.gpx)</button>
         </div>
       </div>`;
     d.classList.add("open"); d.inert = false;
@@ -1038,6 +1039,7 @@ addEventListener("DOMContentLoaded", () => {
       copyText(planText(r, h * 60 + m), "Ride plan copied. Send it to someone who'll miss you.");
     };
     d.querySelector("#download-brief").onclick = () => downloadBrief(r);
+    d.querySelector("#download-gpx").onclick = () => downloadGpx(r);
     d.querySelector("#save").onclick = (e) => {
       const on = !saved.has(r.id);
       on ? saved.add(r.id) : saved.delete(r.id);
@@ -1098,6 +1100,17 @@ addEventListener("DOMContentLoaded", () => {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast("Ride brief saved. It works without signal.");
+  }
+  // The drawn path is hand-traced and approximate, so the file says so.
+  function downloadGpx(r) {
+    const x = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    const pts = r.path.map(([la, ln]) => `<trkpt lat="${la}" lon="${ln}"/>`).join("");
+    const gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Gravel route planner" xmlns="http://www.topografix.com/GPX/1/1"><metadata><name>${x(r.name)}</name><desc>Approximate path only. Sample data, verify before riding.</desc></metadata><trk><name>${x(r.name)}</name><trkseg>${pts}</trkseg></trk></gpx>\n`;
+    const url = URL.createObjectURL(new Blob([gpx], { type: "application/gpx+xml" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: `${r.id}.gpx` });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast("GPX saved. The path is approximate.");
   }
   function copyText(text, msg) {
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast(msg), () => toast("Couldn't access the clipboard"));
