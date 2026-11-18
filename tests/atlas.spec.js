@@ -470,3 +470,38 @@ test("drawer copies a ride plan for a friend using the chosen start time", async
   expect(text).toContain("haven't heard from me");
   expect(errors).toEqual([]);
 });
+
+test("Spin picks a different matching route, opens it and announces it", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(`${PAGE}?route=klickitat&month=any&state=WA`);
+  await expect(page.locator("#drawer")).toHaveClass(/\bopen\b/);
+  const start = new URL(page.url()).searchParams.get("route");
+
+  // Spin jumps via setTimeout, which the pinned clock holds back until it runs again.
+  await page.clock.resume();
+  await openList(page);
+  await page.locator("#spin").click();
+  await expect(page.locator("#toast")).toContainText("The compass says:");
+  await expect.poll(() => new URL(page.url()).searchParams.get("route")).not.toBe(start);
+  // Spin only draws from the routes that match the current filters.
+  const picked = page.locator('#list .route[aria-selected="true"]');
+  await expect(picked).toHaveCount(1);
+  await expect(page.locator("#drawer h2")).toContainText(
+    (await page.locator("#toast").innerText()).replace("The compass says: ", "").trim(),
+  );
+  await expect(page.locator("#drawer .area")).toContainText(", WA");
+  expect(errors).toEqual([]);
+});
+
+test("Spin with nothing matching says so and keeps the current selection", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  await page.locator("#dist").fill("25");
+  await page.locator("#gain").fill("1500");
+  await page.locator("#grav").fill("100");
+  await expect(page.locator("#empty")).toBeVisible();
+
+  await page.locator("#spin").click();
+  await expect(page.locator("#toast")).toContainText("Nothing to spin to");
+  await expect(page.locator("#drawer")).not.toHaveClass(/\bopen\b/);
+});
