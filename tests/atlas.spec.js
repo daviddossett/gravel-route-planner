@@ -496,6 +496,60 @@ test("distance and climbing sliders narrow the list, update the count and land i
   await expect.poll(() => new URL(page.url()).searchParams.has("dist")).toBe(false);
 });
 
+test("Copy link puts a shareable URL with the route and filters on the clipboard", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(`${PAGE}?route=klickitat&month=any&origin=pdx&state=WA`);
+  await page.locator("#copy-link").click();
+  await expect(page.locator("#toast")).toContainText("Link copied");
+
+  const link = new URL(await page.evaluate(() => navigator.clipboard.readText()));
+  expect(link.pathname).toBe(PAGE);
+  expect(link.searchParams.get("route")).toBe("klickitat");
+  expect(link.searchParams.get("state")).toBe("WA");
+  expect(link.searchParams.get("origin")).toBe("pdx");
+  expect(link.searchParams.get("month")).toBe("any");
+
+  // The copied link reopens the same view in a fresh visit.
+  await page.goto(link.pathname + link.search);
+  await expect(page.locator("#drawer h2")).toContainText("Klickitat Trail");
+  await expect(page.locator('#state button[data-v="WA"]')).toHaveAttribute("aria-pressed", "true");
+});
+
+test("Spin picks a different matching route, opens it and announces it", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(`${PAGE}?route=klickitat&month=any&state=WA`);
+  await expect(page.locator("#drawer")).toHaveClass(/\bopen\b/);
+  const start = new URL(page.url()).searchParams.get("route");
+
+  // Spin jumps via setTimeout, which the pinned clock holds back until it runs again.
+  await page.clock.resume();
+  await openList(page);
+  await page.locator("#spin").click();
+  await expect(page.locator("#toast")).toContainText("The compass says:");
+  await expect.poll(() => new URL(page.url()).searchParams.get("route")).not.toBe(start);
+  // Spin only draws from the routes that match the current filters.
+  const picked = page.locator('#list .route[aria-selected="true"]');
+  await expect(picked).toHaveCount(1);
+  await expect(page.locator("#drawer h2")).toContainText(
+    (await page.locator("#toast").innerText()).replace("The compass says: ", "").trim(),
+  );
+  await expect(page.locator("#drawer .area")).toContainText(", WA");
+  expect(errors).toEqual([]);
+});
+
+test("Spin with nothing matching says so and keeps the current selection", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  await page.locator("#dist").fill("25");
+  await page.locator("#gain").fill("1500");
+  await page.locator("#grav").fill("100");
+  await expect(page.locator("#empty")).toBeVisible();
+
+  await page.locator("#spin").click();
+  await expect(page.locator("#toast")).toContainText("Nothing to spin to");
+  await expect(page.locator("#drawer")).not.toHaveClass(/\bopen\b/);
+});
+
 test("marking a route as ridden tags it, persists, and Not ridden yet hides it", async ({ page }) => {
   await page.goto(`${PAGE}?demo`);
   const rows = page.locator("#list .route");
