@@ -446,6 +446,20 @@ test("drawer downloads an offline ride brief with the pack list", async ({ page 
   expect(errors).toEqual([]);
 });
 
+test("drawer downloads an approximate GPX of the route path", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto(`${PAGE}?demo`);
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#download-gpx").click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/\.gpx$/);
+  const text = require("fs").readFileSync(await download.path(), "utf8");
+  expect(text).toContain("<trkpt lat=");
+  expect(text).toContain("Approximate path only");
+  expect(errors).toEqual([]);
+});
+
 test("drawer compares the route with another and keeps the lower value marked", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto(`${PAGE}?demo`);
