@@ -470,3 +470,22 @@ test("drawer copies a ride plan for a friend using the chosen start time", async
   expect(text).toContain("haven't heard from me");
   expect(errors).toEqual([]);
 });
+
+test("Copy link puts a shareable URL with the route and filters on the clipboard", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(`${PAGE}?route=klickitat&month=any&origin=pdx&state=WA`);
+  await page.locator("#copy-link").click();
+  await expect(page.locator("#toast")).toContainText("Link copied");
+
+  const link = new URL(await page.evaluate(() => navigator.clipboard.readText()));
+  expect(link.pathname).toBe(PAGE);
+  expect(link.searchParams.get("route")).toBe("klickitat");
+  expect(link.searchParams.get("state")).toBe("WA");
+  expect(link.searchParams.get("origin")).toBe("pdx");
+  expect(link.searchParams.get("month")).toBe("any");
+
+  // The copied link reopens the same view in a fresh visit.
+  await page.goto(link.pathname + link.search);
+  await expect(page.locator("#drawer h2")).toContainText("Klickitat Trail");
+  await expect(page.locator('#state button[data-v="WA"]')).toHaveAttribute("aria-pressed", "true");
+});
