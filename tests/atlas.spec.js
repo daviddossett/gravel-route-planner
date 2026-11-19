@@ -627,3 +627,17 @@ test("link-preview image URLs are absolute", async ({ page }) => {
     await expect(page.locator(sel)).toHaveAttribute("content", /^https:\/\//);
   }
 });
+
+test("sort order lands in the URL and is restored from a link", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  await page.locator("#sort").selectOption("miles");
+  await expect.poll(() => new URL(page.url()).searchParams.get("sort")).toBe("miles");
+  await page.locator("#sort").selectOption("drive");
+  await expect.poll(() => new URL(page.url()).searchParams.has("sort")).toBe(false);
+
+  await page.goto(`${PAGE}?month=any&sort=gain`);
+  await expect(page.locator("#sort")).toHaveValue("gain");
+  await page.goto(`${PAGE}?month=any&sort=bogus`);
+  await expect(page.locator("#sort")).toHaveValue("drive");
+});

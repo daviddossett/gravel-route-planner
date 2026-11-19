@@ -1137,6 +1137,7 @@ addEventListener("DOMContentLoaded", () => {
       p.set("origin", f.origin);
     }
     changed.forEach((k) => p.set(k, f[k]));
+    if (sortKey !== "drive") p.set("sort", sortKey);
     return p;
   }
   function shareUrl() {
@@ -1157,6 +1158,8 @@ addEventListener("DOMContentLoaded", () => {
     else if (/^\d{1,2}$/.test(m) && +m >= 1 && +m <= 12) f.month = +m;
     if (segValues("state").includes(p.get("state"))) f.state = p.get("state");
     if (segValues("origin").includes(p.get("origin"))) f.origin = p.get("origin");
+    const sk = p.get("sort");
+    if (sk && Object.hasOwn(SORTS, sk)) { sortKey = sk; $("#sort").value = sk; }
     ["dist", "gain", "grav", "drive"].forEach((k) => {
       const v = p.get(k), el = $("#" + k);
       if (v === null || v.trim() === "" || !isFinite(v)) return;
