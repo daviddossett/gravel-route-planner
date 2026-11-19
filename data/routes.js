@@ -67,7 +67,7 @@ window.PNW_ROUTES = [
     highlights: ["Close-up north face of Mt. Hood", "Old Maid Flat lahar forest", "Short drive from Portland"],
     cautions: ["Powerline road is rough — 42mm+", "Snow at the pass into June"],
     path: [[45.344, -121.942], [45.37, -121.90], [45.40, -121.85], [45.423, -121.797], [45.41, -121.83], [45.38, -121.88], [45.36, -121.92], [45.344, -121.942]],
-    profile: [1450, 1600, 1900, 2300, 2800, 3200, 3420, 3100, 2700, 2300, 2100, 1900, 1700, 1550, 1450, 1450]
+    profile: [1450, 1900, 1700, 2300, 2000, 2800, 2500, 3200, 2900, 3420, 3000, 2500, 2100, 1800, 1550, 1450]
   },
   {
     id: "westfir",
@@ -111,7 +111,7 @@ window.PNW_ROUTES = [
     highlights: ["June wildflower bloom across the prairie", "Ponderosa pine corridors", "Near-zero traffic"],
     cautions: ["No water anywhere", "Afternoon heat and storms"],
     path: [[44.396, -120.420], [44.43, -120.35], [44.42, -120.25], [44.38, -120.20], [44.34, -120.26], [44.33, -120.35], [44.36, -120.42], [44.396, -120.420]],
-    profile: [3950, 4300, 4700, 5000, 4800, 4650, 4700, 4900, 5200, 5000, 4700, 4500, 4300, 4150, 4000, 3950]
+    profile: [3950, 4500, 4200, 4800, 4500, 5000, 4600, 5000, 4700, 5200, 4800, 4900, 4500, 4400, 4100, 3950]
   },
   {
     id: "fort-rock",
@@ -133,7 +133,7 @@ window.PNW_ROUTES = [
     highlights: ["Fort Rock tuff ring", "Endless high-desert horizon", "Dark-sky camping"],
     cautions: ["Sand — wider tires help", "Exposed: wind, heat, no shade"],
     path: [[43.124, -121.057], [43.20, -121.08], [43.30, -121.06], [43.37, -121.05], [43.35, -120.95], [43.25, -120.90], [43.17, -120.98], [43.124, -121.057]],
-    profile: [4350, 4380, 4400, 4450, 4500, 4470, 4420, 4400, 4500, 4600, 4550, 4480, 4420, 4380, 4360, 4350]
+    profile: [4350, 4500, 4380, 4600, 4430, 4650, 4480, 4750, 4520, 4650, 4480, 4600, 4430, 4520, 4400, 4350]
   },
   {
     id: "klickitat",
@@ -243,7 +243,7 @@ window.PNW_ROUTES = [
     highlights: ["Steptoe Butte summit panorama", "Rolling wheat-field geometry", "Very little traffic"],
     cautions: ["Harvest trucks Jul–Aug", "Exposed to wind all day"],
     path: [[46.880, -117.364], [46.93, -117.30], [46.99, -117.26], [47.033, -117.298], [47.01, -117.38], [46.95, -117.42], [46.880, -117.364]],
-    profile: [1950, 2200, 2500, 2400, 2650, 2900, 3200, 3600, 3300, 2800, 2600, 2400, 2500, 2300, 2100, 1950]
+    profile: [1950, 2300, 2150, 2600, 2400, 2900, 2700, 3300, 3000, 3600, 3100, 2700, 2500, 2300, 2100, 1950]
   },
   {
     id: "windy-ridge",
