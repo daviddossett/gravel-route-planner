@@ -222,6 +222,17 @@ test("saving a route keeps it across reloads and the Saved filter narrows the li
   expect(await rows.count()).toBeGreaterThan(total - 1);
 });
 
+test("printing shows only the route drawer, not the map or list", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#drawer.open")).toBeVisible();
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator("#drawer h2")).toBeVisible();
+  await expect(page.locator("#pack")).toBeVisible();
+  await expect(page.locator("#map")).toBeHidden();
+  await expect(page.locator("#list")).toBeHidden();
+  await expect(page.locator("#drawer .close")).toBeHidden();
+});
+
 test("state and month filters narrow the list and the count", async ({ page }) => {
   await page.goto(PAGE);
   await openList(page);

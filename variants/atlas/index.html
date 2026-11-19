@@ -443,6 +443,15 @@
     .drawer .detail { grid-template-columns: 1fr; }
     .stats { grid-template-columns: repeat(2, auto); }
   }
+  /* Print: only the open route drawer (name, stats, pack list), flowed onto the page. */
+  @media print {
+    .panel, #map, .map-fallback, .toast, .net-status, .panel-toggle, .leaflet-container { display: none !important; }
+    .app { display: block; height: auto; }
+    .stage { position: static; overflow: visible; }
+    .drawer { position: static; display: block; width: auto; max-height: none; overflow: visible; transform: none; box-shadow: none; border: 0; }
+    .drawer:not(.open) { display: none; }
+    .drawer .close, .drawer .actions { display: none !important; }
+  }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
