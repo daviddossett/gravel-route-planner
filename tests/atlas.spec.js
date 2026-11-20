@@ -25,6 +25,31 @@ function watchErrors(page) {
 }
 
 // On phones the route list is an overlay behind the "Routes" button.
+test("Saved and Ridden marks export to JSON and import back, and bad files change nothing", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#list .route").first()).toBeAttached();
+  await page.locator("#save").click();
+  await page.locator("#ridden").click();
+  const id = await page.evaluate(() => JSON.parse(localStorage.getItem("atlas.saved"))[0]);
+  await openList(page);
+  const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#export-marks").click()]);
+  expect(download.suggestedFilename()).toBe("gravel-atlas-routes.json");
+  const exported = JSON.parse(require("fs").readFileSync(await download.path(), "utf8"));
+  expect(exported).toEqual({ version: 1, saved: [id], ridden: [id] });
+
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await expect(page.locator("#saved-toggle")).toBeHidden();
+  await page.locator("#import-file").setInputFiles({ name: "b.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ version: 1, saved: [id, "nope", 7], ridden: [id] })) });
+  await expect(page.locator("#saved-toggle")).toHaveText("Saved (1)");
+  await expect(page.locator("#list .saved-tag")).toHaveCount(2);
+  expect(await page.evaluate(() => localStorage.getItem("atlas.saved"))).toBe(JSON.stringify([id]));
+
+  await page.locator("#import-file").setInputFiles({ name: "bad.json", mimeType: "application/json", buffer: Buffer.from("not json") });
+  await expect(page.locator("#toast")).toContainText("Nothing changed");
+  await expect(page.locator("#saved-toggle")).toHaveText("Saved (1)");
+});
+
 async function openList(page) {
   const toggle = page.locator("#panel-toggle");
   if (await toggle.isVisible() && (await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
