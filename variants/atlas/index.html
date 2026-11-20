@@ -267,6 +267,7 @@
   .seg button:first-child { border-radius: 3px 0 0 3px; margin-left: 0; }
   .seg button:last-child { border-radius: 0 3px 3px 0; }
   .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  input[type=search] { width: 100%; box-sizing: border-box; min-height: 28px; padding: 4px 8px; font: inherit; font-size: 13px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; }
   input[type=range] { width: 100%; height: 24px; accent-color: var(--forest); margin: 0; }
   button:focus-visible, input:focus-visible, .route:focus-visible { outline: 2px solid var(--rust); outline-offset: 2px; }
 
@@ -485,6 +486,8 @@
     </header>
 
     <section class="filters" aria-label="Filters">
+      <label class="field"><span class="field-head">Search routes</span>
+        <input type="search" id="q" placeholder="Name, town, or area" autocomplete="off"></label>
       <div class="field">
         <div class="field-head"><span id="month-label">Riding in</span><output id="month-out"></output></div>
         <div class="months" role="group" aria-labelledby="month-label" id="months"></div>
@@ -556,7 +559,7 @@ addEventListener("DOMContentLoaded", () => {
   const MONTHS = ["J","F","M","A","M","J","J","A","S","O","N","D"];
   const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const $ = (s) => document.querySelector(s);
-  const defaults = { month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, origin: "sea" };
+  const defaults = { q: "", month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, origin: "sea" };
   const ORIGIN_KEY = "atlas.origin";
   // localStorage can throw (private mode, blocked storage); fall back to the default.
   const loadOrigin = () => { try { const v = localStorage.getItem(ORIGIN_KEY); return ["sea", "pdx", "any"].includes(v) ? v : null; } catch { return null; } };
@@ -614,7 +617,8 @@ addEventListener("DOMContentLoaded", () => {
   };
   let sortKey = "drive";
   $("#sort").addEventListener("change", (e) => { sortKey = e.target.value; render(); });
-  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); savedOnly = false; hideRidden = false; saveOrigin(); render(); };
+  $("#q").addEventListener("input", (e) => { f.q = e.target.value; render(); });
+  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; saveOrigin(); render(); };
   $("#saved-toggle").addEventListener("click", () => { savedOnly = !savedOnly; render(); });
   $("#ridden-toggle").addEventListener("click", () => { hideRidden = !hideRidden; render(); });
   $("#reset").addEventListener("click", resetFilters);
@@ -660,6 +664,8 @@ addEventListener("DOMContentLoaded", () => {
   const offline = window.AtlasOffline && AtlasOffline.init({ routes: ROUTES, map, el: $("#fallback"), onSelect: (id) => select(id, true) });
 
   function matches(r) {
+    const q = f.q.trim().toLowerCase();
+    if (q && ![r.name, r.start, r.region].some((t) => t && t.toLowerCase().includes(q))) return false;
     if (f.month && !r.months.includes(f.month)) return false;
     if (f.state !== "all" && r.state !== f.state) return false;
     if (savedOnly && !saved.has(r.id)) return false;
@@ -670,6 +676,7 @@ addEventListener("DOMContentLoaded", () => {
 
   // Single-filter relaxations offered when nothing matches, best first.
   const LOOSEN = [
+    ["Clear search", () => f.q.trim(), () => { f.q = ""; }],
     ["Any month", () => f.month, () => { f.month = 0; }],
     ["Both states", () => f.state !== "all", () => { f.state = "all"; }],
     ["Any distance", () => f.dist < 70, () => { f.dist = 70; }],
@@ -701,6 +708,7 @@ addEventListener("DOMContentLoaded", () => {
 
   function render() {
     // controls
+    if ($("#q").value !== f.q) $("#q").value = f.q;
     [...monthsEl.children].forEach((b) => b.setAttribute("aria-pressed", +b.dataset.v === f.month));
     $("#month-out").textContent = f.month ? MONTH_NAMES[f.month - 1] : "Any month";
     document.querySelectorAll("#state button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === f.state));
@@ -1130,6 +1138,7 @@ addEventListener("DOMContentLoaded", () => {
   function stateParams() {
     const p = new URLSearchParams();
     if (selected) p.set("route", selected);
+    const q = f.q.trim();
     const changed = ["state", "dist", "gain", "grav", "drive"].filter((k) => f[k] !== defaults[k]);
     // Pin month and origin on any shared state so the link reads the same whatever the viewer's current month or saved origin.
     if (selected || changed.length || f.month !== defaults.month || f.origin !== defaults.origin) {
@@ -1137,6 +1146,7 @@ addEventListener("DOMContentLoaded", () => {
       p.set("origin", f.origin);
     }
     changed.forEach((k) => p.set(k, f[k]));
+    if (q) p.set("q", q);
     if (sortKey !== "drive") p.set("sort", sortKey);
     return p;
   }
@@ -1158,6 +1168,8 @@ addEventListener("DOMContentLoaded", () => {
     else if (/^\d{1,2}$/.test(m) && +m >= 1 && +m <= 12) f.month = +m;
     if (segValues("state").includes(p.get("state"))) f.state = p.get("state");
     if (segValues("origin").includes(p.get("origin"))) f.origin = p.get("origin");
+    f.q = (p.get("q") || "").trim().slice(0, 100);
+    $("#q").value = f.q;
     const sk = p.get("sort");
     if (sk && Object.hasOwn(SORTS, sk)) { sortKey = sk; $("#sort").value = sk; }
     ["dist", "gain", "grav", "drive"].forEach((k) => {
@@ -1191,6 +1203,7 @@ addEventListener("DOMContentLoaded", () => {
   if (linked) {
     if (!ROUTES.filter(matches).some((r) => r.id === linked)) {
       Object.assign(f, defaults, { month: 0, origin: f.origin });
+      $("#q").value = "";
       render();
       toast("Filters loosened to show the linked route");
     }
