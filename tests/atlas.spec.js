@@ -314,6 +314,33 @@ test("search box narrows the list, lands in the URL, restores from it and resets
   expect(new URL(page.url()).searchParams.has("q")).toBe(false);
 });
 
+test("units toggle shows km and m in filters, list and drawer, and leaves the URL alone", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  const first = page.locator("#list .route").first();
+  await expect(first.locator(".nums")).toContainText(/mi · .*ft/);
+  await expect(page.locator("#dist-out")).toContainText("mi");
+  await first.click();
+  await expect(page.locator("#drawer .stats")).toContainText("miles");
+  const url = page.url();
+
+  await openList(page);
+  await page.locator("#units").selectOption("metric");
+  await expect(first.locator(".nums")).toContainText(/km · .*m\b/);
+  await expect(first.locator(".nums")).not.toContainText(" mi ");
+  await expect(page.locator("#dist-out")).toContainText("km");
+  await expect(page.locator("#gain-out")).toContainText(/ m$/);
+  await expect(page.locator("#drawer .stats")).toContainText("kilometers");
+  await expect(page.locator("#drawer .stats")).not.toContainText("miles");
+  await expect(page.locator("#drawer .profile svg")).toHaveAttribute("aria-label", /meters$/);
+  expect(page.url()).toBe(url);
+  expect(await page.locator("#dist").inputValue()).toBe("70");
+
+  await page.reload();
+  await expect(page.locator("#units")).toHaveValue("metric");
+  await expect(page.locator("#dist-out")).toContainText("km");
+});
+
 test("drive origin changes the listed drive times and is remembered", async ({ page }) => {
   await page.goto(`${PAGE}?month=any`);
   await openList(page);
