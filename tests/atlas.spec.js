@@ -1037,6 +1037,26 @@ test("Saved and Not ridden yet toggles persist in the URL and restore on load", 
   await expect.poll(() => params().has("saved") || params().has("unridden")).toBe(false);
 });
 
+test("drawer Prev/Next step through the filtered list, wrap, and update the URL", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#drawer")).toHaveClass(/\bopen\b/);
+  const ids = await page.locator("#list .route").evaluateAll((els) => els.map((e) => e.dataset.id));
+  expect(ids.length).toBeGreaterThan(2);
+  const routeParam = () => new URL(page.url()).searchParams.get("route");
+  const first = page.locator(`#list .route[data-id="${ids[0]}"]`);
+  await first.evaluate((el) => el.click());
+  await expect.poll(routeParam).toBe(ids[0]);
+
+  await page.locator("#route-next").click();
+  await expect.poll(routeParam).toBe(ids[1]);
+  await expect(page.locator("#drawer-title")).toBeFocused();
+
+  await page.locator("#route-prev").click();
+  await expect.poll(routeParam).toBe(ids[0]);
+  await page.locator("#route-prev").click();
+  await expect.poll(routeParam).toBe(ids[ids.length - 1]);
+});
+
 test("Pressing / focuses the search box without typing it, and is ignored inside text fields", async ({ page }) => {
   await page.goto(`${PAGE}?demo`);
   await expect(page.locator("#list .route").first()).toBeAttached();
