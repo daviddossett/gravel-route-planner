@@ -984,3 +984,29 @@ test("No pass needed shows only pass-free routes, round-trips through the URL an
   await expect(page.locator("#nopass-toggle")).toHaveAttribute("aria-pressed", "false");
   expect(page.url()).not.toContain("nopass=");
 });
+
+test("Saved and Not ridden yet toggles persist in the URL and restore on load", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await page.locator("#save").click();
+  await page.locator("#ridden").click();
+  await page.keyboard.press("Escape");
+  await openList(page);
+  const params = () => new URL(page.url()).searchParams;
+  expect(params().has("saved")).toBe(false);
+  expect(params().has("unridden")).toBe(false);
+
+  await page.locator("#saved-toggle").click();
+  await expect.poll(() => params().get("saved")).toBe("1");
+  await page.locator("#ridden-toggle").click();
+  await expect.poll(() => params().get("unridden")).toBe("1");
+
+  await page.goto(page.url());
+  await page.keyboard.press("Escape");
+  await openList(page);
+  await expect(page.locator("#saved-toggle")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#ridden-toggle")).toHaveAttribute("aria-pressed", "true");
+
+  await page.locator("#saved-toggle").click();
+  await page.locator("#ridden-toggle").click();
+  await expect.poll(() => params().has("saved") || params().has("unridden")).toBe(false);
+});
