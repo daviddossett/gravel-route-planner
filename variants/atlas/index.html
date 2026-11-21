@@ -1121,6 +1121,7 @@ addEventListener("DOMContentLoaded", () => {
           <button class="btn ghost" id="save" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save for later"}</button>
           <button class="btn ghost" id="ridden" type="button" aria-pressed="${ridden.has(r.id)}">${ridden.has(r.id) ? "✓ Ridden" : "Mark as ridden"}</button>
           <button class="btn ghost" id="copy-link">Copy link</button>
+          ${typeof navigator.share === "function" ? '<button class="btn ghost" id="share" type="button">Share</button>' : ""}
           <button class="btn ghost" id="zoom">Zoom to route</button>
         </div>
         <div class="sticker" aria-label="Badge for riding this route: ${r.badge}"><small>Ride it, earn it</small><b>${r.badge}</b></div>
@@ -1201,6 +1202,14 @@ addEventListener("DOMContentLoaded", () => {
       render();
     };
     d.querySelector("#copy-link").onclick = () => copyText(shareUrl(), "Link copied. Paste it in the club chat.");
+    const shareBtn = d.querySelector("#share");
+    if (shareBtn) shareBtn.onclick = () => {
+      const url = shareUrl();
+      Promise.resolve().then(() => navigator.share({ title: r.name, text: `${r.name}: ${r.miles} mi, ${fmt(r.gain)} ft of climbing`, url })).catch(e => {
+        if (e && e.name === "AbortError") return;
+        copyText(url, "Link copied. Paste it in the club chat.");
+      });
+    };
   }
   function closeDrawer(restoreFocus) {
     const id = selected, d = $("#drawer");

@@ -659,6 +659,37 @@ test("Copy link puts a shareable URL with the route and filters on the clipboard
   await expect(page.locator('#state button[data-v="WA"]')).toHaveAttribute("aria-pressed", "true");
 });
 
+test("Share button appears only with navigator.share and shares the route link", async ({ page }) => {
+  await page.goto(`${PAGE}?route=klickitat&month=any&state=WA`);
+  await expect(page.locator("#drawer h2")).toContainText("Klickitat Trail");
+  await expect(page.locator("#share")).toHaveCount(0);
+
+  await page.addInitScript(() => { window.__shared = []; navigator.share = (data) => { window.__shared.push(data); return Promise.resolve(); }; });
+  await page.goto(`${PAGE}?route=klickitat&month=any&state=WA`);
+  const btn = page.locator("#share");
+  await expect(btn).toBeVisible();
+  expect((await btn.boundingBox()).height).toBeGreaterThanOrEqual(24);
+  await btn.focus();
+  await page.keyboard.press("Enter");
+  const shared = await page.evaluate(() => window.__shared);
+  expect(shared).toHaveLength(1);
+  expect(shared[0].title).toContain("Klickitat Trail");
+  expect(new URL(shared[0].url).searchParams.get("route")).toBe("klickitat");
+});
+
+test("Share is silent on cancel and falls back to copying the link on other errors", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.addInitScript(() => { navigator.share = () => Promise.reject(new DOMException("cancelled", "AbortError")); });
+  await page.goto(`${PAGE}?route=klickitat&month=any&state=WA`);
+  await page.locator("#share").click();
+  await page.waitForTimeout(300);
+  await expect(page.locator("#toast")).not.toHaveClass(/show/);
+
+  await page.evaluate(() => { navigator.share = () => Promise.reject(new Error("nope")); });
+  await page.locator("#share").click();
+  await expect(page.locator("#toast")).toContainText("Link copied");
+});
+
 test("Spin picks a different matching route, opens it and announces it", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto(`${PAGE}?route=klickitat&month=any&state=WA`);
