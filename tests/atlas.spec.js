@@ -793,3 +793,32 @@ test("Fit map to results zooms to the filtered routes and Reset re-fits all", as
   const total = await page.locator("#list .route").count();
   await expect.poll(() => page.locator("#map .start-pin").count()).toBe(total);
 });
+
+test("elevation profile shows a hover and keyboard readout and Esc hides it without closing the drawer", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any&demo`);
+  await openList(page);
+  await page.locator("#list .route").first().click();
+  const drawer = page.locator("#drawer");
+  await expect(drawer).toHaveClass(/\bopen\b/);
+  const svg = drawer.locator(".profile svg");
+  const readout = drawer.locator("#profile-readout");
+  await svg.scrollIntoViewIfNeeded();
+  const box = await svg.boundingBox();
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
+  await expect(readout).toHaveText(/^Mile \d+ · [\d,]+ ft/);
+  await expect(svg.locator(".guide")).toHaveAttribute("visibility", "visible");
+
+  await page.mouse.move(0, 0);
+  await expect(readout).toHaveText("");
+  await svg.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(readout).toHaveText(/^Mile 0 · [\d,]+ ft/);
+  const first = await readout.textContent();
+  await page.keyboard.press("ArrowRight");
+  await expect(readout).not.toHaveText(first);
+  await expect(svg).toHaveAttribute("aria-valuetext", /^Mile \d+ · /);
+
+  await page.keyboard.press("Escape");
+  await expect(readout).toHaveText("");
+  await expect(drawer).toHaveClass(/\bopen\b/);
+});
