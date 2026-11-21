@@ -251,6 +251,23 @@ test("sort control reorders the route list", async ({ page }) => {
   expect(pct).toEqual([...pct].sort((a, b) => b - a));
 });
 
+test("Longest distance and Most climbing sort descending", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  for (const [key, field] of [["miles-desc", "miles"], ["gain-desc", "gain"]]) {
+    await page.locator("#sort").selectOption(key);
+    await expect.poll(() => new URL(page.url()).searchParams.get("sort")).toBe(key);
+    const vals = await page.evaluate((f) => [...document.querySelectorAll("#list .route")].map((r) => window.PNW_ROUTES.find((x) => x.id === r.dataset.id)[f]), field);
+    expect(vals.length).toBeGreaterThan(1);
+    expect(vals[0]).toBe(Math.max(...vals));
+    expect(vals).toEqual([...vals].sort((a, b) => b - a));
+    await page.goto(`${PAGE}?month=any&sort=${key}`);
+    await expect(page.locator("#sort")).toHaveValue(key);
+    await openList(page);
+  }
+});
+
 test("on phones the route list is a toggleable overlay over a full-height map", async ({ page }) => {
   test.skip(!(page.viewportSize() && page.viewportSize().width <= 760), "phone layout only");
   await page.goto(PAGE);
@@ -1039,4 +1056,14 @@ test("Saved and Not ridden yet toggles persist in the URL and restore on load", 
   await page.locator("#saved-toggle").click();
   await page.locator("#ridden-toggle").click();
   await expect.poll(() => params().has("saved") || params().has("unridden")).toBe(false);
+});
+
+test("Pressing / focuses the search box without typing it, and is ignored inside text fields", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#list .route").first()).toBeAttached();
+  await page.keyboard.press("/");
+  await expect(page.locator("#q")).toBeFocused();
+  await expect(page.locator("#q")).toHaveValue("");
+  await page.keyboard.type("a/b");
+  await expect(page.locator("#q")).toHaveValue("a/b");
 });
