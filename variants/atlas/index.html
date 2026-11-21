@@ -362,6 +362,8 @@
   .tire-fit select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
   .ride-time .est + .est { margin-top: 4px; }
   .ride-time .est b { font-family: var(--mono); font-weight: 500; color: var(--ink); }
+  .copy-coords { font: 600 12px var(--sans); min-height: 24px; padding: 2px 8px; margin-left: 6px; border-radius: 4px; border: 1px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; }
+  .copy-coords:hover { background: var(--forest); border-color: var(--forest); color: var(--paper); }
   .btn { font: 600 13px var(--sans); padding: 8px 12px; border-radius: 4px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); cursor: pointer; }
   .btn.ghost { background: transparent; color: var(--ink); }
   .btn[aria-pressed="true"] { border-color: var(--forest); color: var(--forest); }
@@ -464,7 +466,7 @@
     .stage { position: static; overflow: visible; }
     .drawer { position: static; display: block; width: auto; max-height: none; overflow: visible; transform: none; box-shadow: none; border: 0; }
     .drawer:not(.open) { display: none; }
-    .drawer .close, .drawer .actions, .drawer .route-nav { display: none !important; }
+    .drawer .close, .drawer .actions, .drawer .route-nav, .drawer .copy-coords { display: none !important; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -1185,7 +1187,7 @@ addEventListener("DOMContentLoaded", () => {
         <dl>
           <dt>Fun type</dt><dd><span class="fun f${r.difficulty}" style="margin:0">${FUN[r.difficulty]}</span></dd>
           <dt>Route type</dt><dd>${TYPE[r.type]}. ${TYPE_NOTE[r.type]}</dd>
-          <dt>Start</dt><dd>${r.start} · <a class="dir-link" id="directions" href="${directionsUrl(r)}" target="_blank" rel="noopener" aria-label="Driving directions to ${r.start}, opens in a new tab">Driving directions ↗</a></dd>
+          <dt>Start</dt><dd>${r.start} · <a class="dir-link" id="directions" href="${directionsUrl(r)}" target="_blank" rel="noopener" aria-label="Driving directions to ${r.start}, opens in a new tab">Driving directions ↗</a> <button type="button" class="copy-coords" id="copy-coords" title="Copies the approximate trailhead latitude and longitude (sample data)" aria-label="Copy trailhead coordinates for ${r.start}">Copy coordinates</button></dd>
           <dt>Forecast</dt><dd><a class="dir-link" id="forecast" href="${forecastUrl(r)}" target="_blank" rel="noopener" aria-label="Check the forecast near ${r.start}, opens in a new tab">Check the forecast ↗</a></dd>
           <dt>Surface</dt><dd>${r.surface}</dd>
           <dt>Water</dt><dd>${waterLabel[r.water]}. ${r.waterNote}</dd>
@@ -1233,6 +1235,7 @@ addEventListener("DOMContentLoaded", () => {
     };
     d.querySelector("#zoom").onclick = () => flyToRoute(r);
     d.querySelector("#copy").onclick = () => copyBrief(r);
+    d.querySelector("#copy-coords").onclick = () => copyText(r.path[0].map((n) => n.toFixed(5)).join(", "), "Coordinates copied. Route data is approximate sample data.");
     d.querySelector("#copy-plan").onclick = () => {
       const [h, m] = d.querySelector("#plan-start").value.split(":").map(Number);
       if (Number.isNaN(h) || Number.isNaN(m)) return toast("Pick a start time first");

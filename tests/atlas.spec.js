@@ -726,6 +726,17 @@ test("distance and climbing sliders narrow the list, update the count and land i
   await expect.poll(() => new URL(page.url()).searchParams.has("dist")).toBe(false);
 });
 
+test("Copy coordinates puts the trailhead lat, lon on the clipboard", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(`${PAGE}?route=gales-creek`);
+  const btn = page.locator("#copy-coords");
+  await expect(btn).toHaveAttribute("aria-label", /Copy trailhead coordinates for /);
+  expect((await btn.boundingBox()).height).toBeGreaterThanOrEqual(24);
+  await btn.click();
+  await expect(page.locator("#toast")).toContainText("Coordinates copied");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^-?\d+\.\d{5}, -?\d+\.\d{5}$/);
+});
+
 test("Copy link puts a shareable URL with the route and filters on the clipboard", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto(`${PAGE}?route=klickitat&month=any&origin=pdx&state=WA`);
