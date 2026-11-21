@@ -92,6 +92,19 @@ test("demo loads with routes, a visible drawer, and Esc closes it", async ({ pag
   expect(errors, "page and console errors").toEqual([]);
 });
 
+test("drawer season strip fills one cell per season month and outlines the filter month", async ({ page }) => {
+  await page.goto(`${PAGE}?demo&month=7`);
+  const strip = page.locator("#drawer .season-strip");
+  await expect(strip).toHaveAttribute("role", "img");
+  await expect(strip).toHaveAttribute("aria-label", /^In season: /);
+  const months = await page.evaluate(() => {
+    const name = document.querySelector("#drawer h2").textContent.trim();
+    return window.PNW_ROUTES.find((r) => r.name === name).months;
+  });
+  await expect(strip.locator("span.on")).toHaveCount(months.length);
+  await expect(strip.locator("span.sel")).toHaveCount(1);
+});
+
 test("route list still renders offline after the first visit", async ({ page, context }) => {
   const errors = watchErrors(page);
   await page.goto(PAGE);
