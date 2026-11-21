@@ -139,6 +139,38 @@ test("empty state keeps the listbox free of non-option children and reset works"
   await expect(page.locator("#count")).toHaveText(/^(\d+) of \1 routes$/);
 });
 
+test("Max fun type filter limits the list, round-trips through the URL and resets", async ({ page }) => {
+  await page.goto(PAGE);
+  await openList(page);
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  await expect(page.locator("#fun")).toHaveValue("5");
+  await expect(page.locator("#fun-out")).toHaveText("any");
+  const total = await page.locator("#list .route").count();
+  const labels = () => page.locator("#list .route .fun").allTextContents();
+
+  await page.locator("#fun").fill("2");
+  await expect(page.locator("#fun-out")).toHaveText("≤ Cruisy");
+  const shown = await labels();
+  expect(shown.length).toBeGreaterThan(0);
+  expect(shown.length).toBeLessThan(total);
+  for (const l of shown) expect(["Chill", "Cruisy"]).toContain(l);
+  expect(page.url()).toContain("fun=2");
+
+  await page.goto(PAGE + "?fun=2");
+  await openList(page);
+  await expect(page.locator("#fun")).toHaveValue("2");
+  expect(await labels()).toEqual(shown);
+
+  await page.goto(PAGE + "?fun=bogus");
+  await expect(page.locator("#fun")).toHaveValue("5");
+
+  await page.goto(PAGE + "?fun=2");
+  await openList(page);
+  await page.locator("#reset").click();
+  await expect(page.locator("#fun")).toHaveValue("5");
+  expect(page.url()).not.toContain("fun=");
+});
+
 test("sort control reorders the route list", async ({ page }) => {
   await page.goto(PAGE);
   await openList(page);
@@ -766,4 +798,42 @@ test("Fits my tires filters the list by the saved tire size and clears with it",
   await page.locator("#my-tire").selectOption("0");
   await expect(toggle).toBeHidden();
   await expect(rows).toHaveCount(total);
+});
+
+test("Fit map to results zooms to the filtered routes and Reset re-fits all", async ({ page }) => {
+  await page.goto(`${PAGE}?demo&month=any`);
+  await openList(page);
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  const btn = page.getByRole("button", { name: "Fit map to results" });
+  await expect(btn).toBeVisible();
+  expect((await btn.boundingBox()).height).toBeGreaterThanOrEqual(24);
+
+  const span = () => page.locator("#map .start-pin").evaluateAll((pins) => {
+    const xs = pins.map((p) => p.getBoundingClientRect()).map((r) => r.left);
+    return xs.length ? Math.max(...xs) - Math.min(...xs) : 0;
+  });
+  await page.locator('#state button[data-v="WA"]').click();
+  const closeList = async () => {
+    const toggle = page.locator("#panel-toggle");
+    if (await toggle.isVisible() && (await toggle.getAttribute("aria-expanded")) === "true") await toggle.click();
+  };
+  await closeList();
+  await page.locator(".leaflet-control-zoom-out").click();
+  await page.locator(".leaflet-control-zoom-out").click();
+  await page.waitForTimeout(600);
+  const before = await span();
+  await btn.click();
+  await expect.poll(span).toBeGreaterThan(before);
+  const box = await page.locator("#map").boundingBox();
+  const inView = await page.locator("#map .start-pin").evaluateAll((pins, b) => pins.every((p) => {
+    const r = p.getBoundingClientRect();
+    return r.left >= b.x && r.right <= b.x + b.width && r.top >= b.y && r.bottom <= b.y + b.height;
+  }), box);
+  expect(inView).toBe(true);
+
+  await openList(page);
+  await page.locator("#reset").click();
+  await closeList();
+  const total = await page.locator("#list .route").count();
+  await expect.poll(() => page.locator("#map .start-pin").count()).toBe(total);
 });

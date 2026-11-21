@@ -304,6 +304,10 @@
   .panel-toggle { display: none; }
   #map { position: absolute; inset: 0; background: var(--map-bg); }
   #map .leaflet-tile-pane { filter: var(--tile-filter); }
+  .fit-results button { display: block; min-height: 32px; padding: 4px 10px; border: 0; border-radius: inherit; background: var(--paper); color: var(--ink); font: 600 13px var(--sans); cursor: pointer; }
+  .fit-results button:hover:not(:disabled) { background: color-mix(in srgb, var(--paper) 85%, var(--ink)); }
+  .fit-results button:disabled { color: var(--ink-2); cursor: not-allowed; }
+  .fit-results button:focus-visible { outline: 3px solid var(--forest); outline-offset: 1px; }
   .map-fallback { position: absolute; inset: 0; display: none; place-items: center; text-align: center; padding: 40px; color: var(--ink-2); }
   .map-fallback.svg { padding: 0; grid-template: 1fr / 1fr; place-items: stretch; background: #e4e6da; }
   .map-fallback svg { width: 100%; height: 100%; display: block; }
@@ -427,7 +431,7 @@
     /* The list is an overlay over the full-height map, toggled by the Routes button. */
     .panel { position: fixed; inset: 0; z-index: 5; border-right: 0; overflow-y: auto; overscroll-behavior: contain; padding-top: calc(68px + env(safe-area-inset-top)); visibility: hidden; transform: translateY(12px); opacity: 0; transition: opacity .18s, transform .18s, visibility 0s .18s; }
     .app.panel-open .panel { visibility: visible; transform: none; opacity: 1; transition: opacity .18s, transform .18s; }
-    .list { overflow: visible; }
+    .list { overflow: visible; flex: none; }
     /* Lives outside .stage so neither the map panes nor the open list can paint over it. Ink on paper keeps it legible on every theme and map. */
     .panel-toggle { display: inline-flex; align-items: center; gap: 8px; position: fixed; top: calc(12px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); z-index: 6; min-height: 44px; min-width: 44px; padding: 0 18px 0 14px; border: 0; border-radius: 999px; background: var(--ink); color: var(--paper); font: 600 15px/1 var(--sans); box-shadow: 0 0 0 2px var(--paper), 0 3px 10px rgba(0, 0, 0, .35); cursor: pointer; }
     .panel-toggle svg { width: 18px; height: 18px; flex: none; }
@@ -519,6 +523,10 @@
         <label class="field"><span class="field-head">Drive from <output id="drive-out"></output></span>
           <input type="range" id="drive" min="1" max="7" step="0.5" value="7"></label>
       </div>
+      <div class="row-2">
+        <label class="field"><span class="field-head">Max fun type <output id="fun-out"></output></span>
+          <input type="range" id="fun" min="1" max="5" step="1" value="5"></label>
+      </div>
       <div class="seg" role="group" aria-label="Drive time measured from" id="origin">
         <button data-v="sea" aria-pressed="true">Seattle</button>
         <button data-v="pdx" aria-pressed="false">Portland</button>
@@ -571,7 +579,7 @@ addEventListener("DOMContentLoaded", () => {
   const MONTHS = ["J","F","M","A","M","J","J","A","S","O","N","D"];
   const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const $ = (s) => document.querySelector(s);
-  const defaults = { q: "", month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, origin: "sea" };
+  const defaults = { q: "", month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, fun: 5, origin: "sea" };
   const ORIGIN_KEY = "atlas.origin";
   // localStorage can throw (private mode, blocked storage); fall back to the default.
   const loadOrigin = () => { try { const v = localStorage.getItem(ORIGIN_KEY); return ["sea", "pdx", "any"].includes(v) ? v : null; } catch { return null; } };
@@ -626,7 +634,7 @@ addEventListener("DOMContentLoaded", () => {
   });
   bindSeg($("#state"), "state"); bindSeg($("#origin"), "origin");
   $("#origin").addEventListener("click", saveOrigin);
-  ["dist", "gain", "grav", "drive"].forEach((k) => $("#" + k).addEventListener("input", (e) => { f[k] = +e.target.value; render(); }));
+  ["dist", "gain", "grav", "drive", "fun"].forEach((k) => $("#" + k).addEventListener("input", (e) => { f[k] = +e.target.value; render(); }));
   const SORTS = {
     drive: (a, b) => driveFrom(a).h - driveFrom(b).h,
     miles: (a, b) => a.miles - b.miles || driveFrom(a).h - driveFrom(b).h,
@@ -638,7 +646,7 @@ addEventListener("DOMContentLoaded", () => {
   let sortKey = "drive";
   $("#sort").addEventListener("change", (e) => { sortKey = e.target.value; render(); });
   $("#q").addEventListener("input", (e) => { f.q = e.target.value; render(); });
-  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; fitTires = false; saveOrigin(); render(); };
+  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; fitTires = false; saveOrigin(); render(); fitResults(); };
   $("#saved-toggle").addEventListener("click", () => { savedOnly = !savedOnly; render(); });
   $("#ridden-toggle").addEventListener("click", () => { hideRidden = !hideRidden; render(); });
   $("#tire-toggle").addEventListener("click", () => { fitTires = !fitTires; render(); });
@@ -688,6 +696,18 @@ addEventListener("DOMContentLoaded", () => {
       layers[r.id] = { group, line, casing, ants, pin };
     });
     map.fitBounds(L.latLngBounds(ROUTES.flatMap((r) => r.path)), { padding: [40, 40] });
+    const FitControl = L.Control.extend({
+      onAdd() {
+        const box = L.DomUtil.create("div", "leaflet-bar fit-results");
+        const b = L.DomUtil.create("button", "", box);
+        b.id = "fit-results"; b.type = "button"; b.textContent = "Fit map to results";
+        b.setAttribute("aria-label", "Fit map to results");
+        L.DomEvent.disableClickPropagation(box);
+        b.addEventListener("click", () => fitResults());
+        return box;
+      }
+    });
+    new FitControl({ position: "topright" }).addTo(map);
   } else {
     $("#fallback").style.display = "grid";
   }
@@ -701,7 +721,7 @@ addEventListener("DOMContentLoaded", () => {
     if (savedOnly && !saved.has(r.id)) return false;
     if (hideRidden && ridden.has(r.id)) return false;
     if (fitTires && myTire && r.tire > myTire) return false; // same rule as tireFitText: gap <= 0 is a fit
-    if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav) return false;
+    if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav || r.difficulty > f.fun) return false;
     return f.drive >= 7 || driveFrom(r).h <= f.drive; // 7 h = "any"
   }
 
@@ -713,6 +733,7 @@ addEventListener("DOMContentLoaded", () => {
     ["Any distance", () => f.dist < 70, () => { f.dist = 70; }],
     ["Any climbing", () => f.gain < 6000, () => { f.gain = 6000; }],
     ["Any gravel share", () => f.grav > 0, () => { f.grav = 0; }],
+    ["Any fun type", () => f.fun < 5, () => { f.fun = 5; }],
     ["Any drive time", () => f.drive < 7, () => { f.drive = 7; }],
     ["All routes, not just saved", () => savedOnly, () => { savedOnly = false; }],
     ["Include ridden routes", () => hideRidden, () => { hideRidden = false; }],
@@ -745,10 +766,11 @@ addEventListener("DOMContentLoaded", () => {
     $("#month-out").textContent = f.month ? MONTH_NAMES[f.month - 1] : "Any month";
     document.querySelectorAll("#state button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === f.state));
     document.querySelectorAll("#origin button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === f.origin));
-    ["dist", "gain", "grav", "drive"].forEach((k) => $("#" + k).value = f[k]);
+    ["dist", "gain", "grav", "drive", "fun"].forEach((k) => $("#" + k).value = f[k]);
     $("#dist-out").textContent = `${distV(f.dist)} ${distU()}`;
     $("#gain-out").textContent = `${elevV(f.gain)} ${elevU()}`;
     $("#grav-out").textContent = `${f.grav}%`;
+    $("#fun-out").textContent = f.fun >= 5 ? "any" : `≤ ${FUN[f.fun]}`;
     $("#drive-out").textContent = f.drive >= 7 ? "any" : `≤ ${f.drive} h`;
 
     const known = ROUTES.filter((r) => saved.has(r.id)).length;
@@ -802,6 +824,8 @@ addEventListener("DOMContentLoaded", () => {
     }
 
     if (offline) offline.update({ shown: shown.map((r) => r.id) });
+    const fitBtn = $("#fit-results");
+    if (fitBtn) fitBtn.disabled = !shown.length;
     if (map) {
       const ids = new Set(shown.map((r) => r.id));
       ROUTES.forEach((r) => {
@@ -872,6 +896,14 @@ addEventListener("DOMContentLoaded", () => {
     syncUrl();
     if (fly) flyToRoute(r);
     if (moveFocus) $("#drawer-title").focus({ preventScroll: true });
+  }
+
+  function fitResults() {
+    if (!map) return;
+    const pts = ROUTES.filter(matches).flatMap((r) => r.path);
+    if (!pts.length) return;
+    const opts = selected ? routePadding() : { padding: [40, 40] };
+    map.fitBounds(L.latLngBounds(pts), reduceMotion() ? { ...opts, animate: false } : opts);
   }
 
   function flyToRoute(r) {
@@ -1226,7 +1258,7 @@ addEventListener("DOMContentLoaded", () => {
     const p = new URLSearchParams();
     if (selected) p.set("route", selected);
     const q = f.q.trim();
-    const changed = ["state", "dist", "gain", "grav", "drive"].filter((k) => f[k] !== defaults[k]);
+    const changed = ["state", "dist", "gain", "grav", "drive", "fun"].filter((k) => f[k] !== defaults[k]);
     // Pin month and origin on any shared state so the link reads the same whatever the viewer's current month or saved origin.
     if (selected || changed.length || f.month !== defaults.month || f.origin !== defaults.origin) {
       p.set("month", f.month || "any");
@@ -1259,7 +1291,7 @@ addEventListener("DOMContentLoaded", () => {
     $("#q").value = f.q;
     const sk = p.get("sort");
     if (sk && Object.hasOwn(SORTS, sk)) { sortKey = sk; $("#sort").value = sk; }
-    ["dist", "gain", "grav", "drive"].forEach((k) => {
+    ["dist", "gain", "grav", "drive", "fun"].forEach((k) => {
       const v = p.get(k), el = $("#" + k);
       if (v === null || v.trim() === "" || !isFinite(v)) return;
       const min = +el.min, max = +el.max, step = +el.step;
