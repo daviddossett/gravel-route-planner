@@ -36,6 +36,10 @@ It reports **errors** (exit 1) for missing or malformed fields, an unknown `type
 
 Each route's `type` is `loop`, `out-and-back`, or `point-to-point`. Draw out-and-back paths one way only; `miles` is the round trip.
 
+## Keyboard shortcuts
+
+Press `/` anywhere (outside a text field) to jump to the route search box; `Esc` closes the details drawer or the route list.
+
 ## Tests
 
 The site has no dependencies. Playwright is a dev-only dependency for browser smoke tests:
