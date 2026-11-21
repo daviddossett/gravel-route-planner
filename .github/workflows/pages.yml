@@ -46,14 +46,36 @@ jobs:
       - name: Assemble site and PR previews
         run: scripts/build-pages.sh _site > "$RUNNER_TEMP/previews"
 
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
 
-      - uses: actions/upload-pages-artifact@v3
+      # Artifacts from earlier attempts stay on the run, so a re-run with a fixed
+      # name finds several and deploy-pages refuses to pick one.
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
+          name: github-pages-${{ github.run_attempt }}
+
+      # The artifact listing can briefly lag the upload; retry once after a pause.
+      - id: deploy-first
+        uses: actions/deploy-pages@v5
+        continue-on-error: true
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
+
+      - if: steps.deploy-first.outcome == 'failure'
+        run: sleep 20
+
+      - id: deploy-retry
+        if: steps.deploy-first.outcome == 'failure'
+        uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        env:
+          FIRST_URL: ${{ steps.deploy-first.outputs.page_url }}
+          RETRY_URL: ${{ steps.deploy-retry.outputs.page_url }}
+        run: echo "page_url=${RETRY_URL:-$FIRST_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Comment preview links
         env:
