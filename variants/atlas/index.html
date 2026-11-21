@@ -379,6 +379,10 @@
   .detail dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; line-height: 1.4; }
   .detail dt { color: var(--ink-2); }
   .detail dd { margin: 0; }
+  .season-strip { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2px; max-width: 320px; margin-top: 4px; }
+  .season-strip span { box-sizing: border-box; text-align: center; font: 600 10px/16px var(--mono); border: 1px solid var(--line); border-radius: 2px; color: var(--ink-2); }
+  .season-strip span.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .season-strip span.sel { outline: 2px solid var(--ink-2); outline-offset: 1px; }
   .dir-link { color: var(--forest); text-decoration: underline; white-space: nowrap; display: inline-flex; align-items: center; min-height: 24px; }
   .detail ul { margin: 0; padding-left: 16px; font-size: 13px; line-height: 1.5; }
   .detail h3 { margin: 4px 0 2px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
@@ -1192,7 +1196,7 @@ addEventListener("DOMContentLoaded", () => {
           <dt>Surface</dt><dd>${r.surface}</dd>
           <dt>Water</dt><dd>${waterLabel[r.water]}. ${r.waterNote}</dd>
           <dt>Pass</dt><dd>${r.pass || "None needed"}</dd>
-          <dt>Season</dt><dd>${seasonText(r.months)}</dd>
+          <dt>Season</dt><dd>${seasonText(r.months)}${seasonStrip(r.months)}</dd>
           <dt>Reward</dt><dd>${r.stop}</dd>
         </dl>
         <div>
@@ -1289,15 +1293,26 @@ addEventListener("DOMContentLoaded", () => {
     }
     returnTo = null;
   }
-  function seasonText(ms) {
-    const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  function seasonRuns(ms, names, range) {
     const runs = []; let start = ms[0], prev = ms[0];
     for (let i = 1; i <= ms.length; i++) {
       if (ms[i] === prev + 1) { prev = ms[i]; continue; }
-      runs.push(start === prev ? names[start - 1] : `${names[start - 1]}–${names[prev - 1]}`);
+      runs.push(start === prev ? names[start - 1] : range(names[start - 1], names[prev - 1]));
       start = prev = ms[i];
     }
     return runs.join(", ");
+  }
+  function seasonText(ms) {
+    const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return seasonRuns(ms, names, (a, b) => `${a}–${b}`);
+  }
+  function seasonStrip(ms) {
+    const label = `In season: ${seasonRuns(ms, MONTH_NAMES, (a, b) => `${a} to ${b}`)}`;
+    const cells = MONTH_NAMES.map((n, i) => {
+      const cls = (ms.includes(i + 1) ? "on" : "") + (f.month === i + 1 ? " sel" : "");
+      return `<span class="${cls.trim()}" aria-hidden="true">${n[0]}</span>`;
+    }).join("");
+    return `<span class="season-strip" role="img" aria-label="${label}">${cells}</span>`;
   }
   function briefText(r) {
     return `${r.name} (${r.area}, ${r.state})\n${TYPE[r.type]} · ${r.miles} mi · ${fmt(r.gain)} ft · ${r.gravel}% gravel · ${r.tire}mm+ tires\nEst. riding time: ${hm(rideHours(r))} (${pace} pace)\nStart: ${r.start}\nWater: ${waterLabel[r.water]}. ${r.waterNote}\nPass: ${r.pass || "none"}\nWatch for: ${r.cautions.join("; ")}\nMap: ${shareUrl()}\n(Sample data — verify before riding.)`;
