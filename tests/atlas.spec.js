@@ -284,6 +284,36 @@ test("state and month filters narrow the list and the count", async ({ page }) =
   await expect(page.locator("#count")).toHaveText(new RegExp(`^${wa} of \\d+ routes$`));
 });
 
+test("search box narrows the list, lands in the URL, restores from it and resets", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeVisible();
+  const total = await rows.count();
+  const box = page.getByRole("searchbox", { name: "Search routes" });
+  expect((await box.boundingBox()).height).toBeGreaterThanOrEqual(24);
+
+  await box.fill("  IRON horse ");
+  await expect(rows.first()).toBeVisible();
+  const n = await rows.count();
+  expect(n).toBeGreaterThan(0);
+  expect(n).toBeLessThan(total);
+  await expect(rows.first()).toContainText(/iron horse/i);
+  await expect(page.locator("#count")).toHaveText(new RegExp(`^${n} of ${total} routes$`));
+  await expect.poll(() => new URL(page.url()).searchParams.get("q")).toBe("IRON horse");
+
+  await box.fill("zzzz-no-such-route");
+  await expect(page.locator("#empty")).toBeVisible();
+
+  await page.reload();
+  await openList(page);
+  await expect(box).toHaveValue("zzzz-no-such-route");
+  await page.locator("#reset2").click();
+  await expect(box).toHaveValue("");
+  await expect(rows).toHaveCount(total);
+  expect(new URL(page.url()).searchParams.has("q")).toBe(false);
+});
+
 test("drive origin changes the listed drive times and is remembered", async ({ page }) => {
   await page.goto(`${PAGE}?month=any`);
   await openList(page);
