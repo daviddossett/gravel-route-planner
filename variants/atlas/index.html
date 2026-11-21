@@ -542,6 +542,7 @@
       <button type="button" class="saved-toggle" id="ridden-toggle" aria-pressed="false" hidden></button>
       <button type="button" class="saved-toggle" id="tire-toggle" aria-pressed="false" hidden>Fits my tires</button>
       <button type="button" class="saved-toggle" id="water-toggle" aria-pressed="false">Has water on route</button>
+      <button type="button" class="saved-toggle" id="nopass-toggle" aria-pressed="false">No pass needed</button>
       <label class="sort">Sort <select id="sort">
         <option value="drive">Closest drive</option>
         <option value="miles">Shortest distance</option>
@@ -583,7 +584,7 @@ addEventListener("DOMContentLoaded", () => {
   const MONTHS = ["J","F","M","A","M","J","J","A","S","O","N","D"];
   const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const $ = (s) => document.querySelector(s);
-  const defaults = { q: "", month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, fun: 5, origin: "sea", water: false };
+  const defaults = { q: "", month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, fun: 5, origin: "sea", water: false, nopass: false };
   const ORIGIN_KEY = "atlas.origin";
   // localStorage can throw (private mode, blocked storage); fall back to the default.
   const loadOrigin = () => { try { const v = localStorage.getItem(ORIGIN_KEY); return ["sea", "pdx", "any"].includes(v) ? v : null; } catch { return null; } };
@@ -655,6 +656,7 @@ addEventListener("DOMContentLoaded", () => {
   $("#ridden-toggle").addEventListener("click", () => { hideRidden = !hideRidden; render(); });
   $("#tire-toggle").addEventListener("click", () => { fitTires = !fitTires; render(); });
   $("#water-toggle").addEventListener("click", () => { f.water = !f.water; render(); });
+  $("#nopass-toggle").addEventListener("click", () => { f.nopass = !f.nopass; render(); });
   $("#reset").addEventListener("click", resetFilters);
   $("#reset2").addEventListener("click", resetFilters);
   $("#empty-hints").addEventListener("click", (e) => {
@@ -727,6 +729,7 @@ addEventListener("DOMContentLoaded", () => {
     if (hideRidden && ridden.has(r.id)) return false;
     if (fitTires && myTire && r.tire > myTire) return false; // same rule as tireFitText: gap <= 0 is a fit
     if (f.water && r.water === "none") return false;
+    if (f.nopass && r.pass) return false;
     if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav || r.difficulty > f.fun) return false;
     return f.drive >= 7 || driveFrom(r).h <= f.drive; // 7 h = "any"
   }
@@ -745,6 +748,7 @@ addEventListener("DOMContentLoaded", () => {
     ["Include ridden routes", () => hideRidden, () => { hideRidden = false; }],
     ["Any tire size", () => fitTires, () => { fitTires = false; }],
     ["Any water situation", () => f.water, () => { f.water = false; }],
+    ["Allow routes that need a pass", () => f.nopass, () => { f.nopass = false; }],
   ];
   function looseningHints() {
     const snap = () => [{ ...f }, savedOnly, hideRidden, fitTires];
@@ -798,6 +802,7 @@ addEventListener("DOMContentLoaded", () => {
     tt.textContent = myTire ? `Fits my ${myTire} mm tires` : "Fits my tires";
     tt.setAttribute("aria-pressed", fitTires);
     $("#water-toggle").setAttribute("aria-pressed", f.water);
+    $("#nopass-toggle").setAttribute("aria-pressed", f.nopass);
     const shown = ROUTES.filter(matches).sort(SORTS[sortKey]);
     $("#count").textContent = `${shown.length} of ${ROUTES.length} routes`;
 
@@ -1323,6 +1328,7 @@ addEventListener("DOMContentLoaded", () => {
     changed.forEach((k) => p.set(k, f[k]));
     if (q) p.set("q", q);
     if (f.water) p.set("water", "1");
+    if (f.nopass) p.set("nopass", "1");
     if (sortKey !== "drive") p.set("sort", sortKey);
     return p;
   }
@@ -1347,6 +1353,7 @@ addEventListener("DOMContentLoaded", () => {
     f.q = (p.get("q") || "").trim().slice(0, 100);
     $("#q").value = f.q;
     f.water = p.get("water") === "1";
+    f.nopass = p.get("nopass") === "1";
     const sk = p.get("sort");
     if (sk && Object.hasOwn(SORTS, sk)) { sortKey = sk; $("#sort").value = sk; }
     ["dist", "gain", "grav", "drive", "fun"].forEach((k) => {
