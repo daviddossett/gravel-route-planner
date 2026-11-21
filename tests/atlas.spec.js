@@ -925,3 +925,32 @@ test("Has water on route hides routes with no water, round-trips through the URL
   await expect(page.locator("#water-toggle")).toHaveAttribute("aria-pressed", "false");
   expect(page.url()).not.toContain("water=");
 });
+
+test("No pass needed shows only pass-free routes, round-trips through the URL and resets", async ({ page }) => {
+  await page.goto(PAGE + "?month=any");
+  await openList(page);
+  const toggle = page.locator("#nopass-toggle");
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  const total = await rows.count();
+  const free = await page.evaluate(() => window.PNW_ROUTES.filter((r) => !r.pass).length);
+  expect(free).toBeGreaterThan(0);
+  expect(free).toBeLessThan(total);
+  expect(page.url()).not.toContain("nopass=");
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(rows).toHaveCount(free);
+  await expect(page.locator("#count")).toHaveText(`${free} of ${total} routes`);
+  expect(page.url()).toContain("nopass=1");
+
+  await page.goto(PAGE + "?month=any&nopass=1");
+  await openList(page);
+  await expect(page.locator("#nopass-toggle")).toHaveAttribute("aria-pressed", "true");
+  await expect(rows).toHaveCount(free);
+
+  await page.locator("#reset").click();
+  await expect(page.locator("#nopass-toggle")).toHaveAttribute("aria-pressed", "false");
+  expect(page.url()).not.toContain("nopass=");
+});
