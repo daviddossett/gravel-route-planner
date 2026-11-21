@@ -1329,6 +1329,8 @@ addEventListener("DOMContentLoaded", () => {
     if (q) p.set("q", q);
     if (f.water) p.set("water", "1");
     if (f.nopass) p.set("nopass", "1");
+    if (savedOnly) p.set("saved", "1");
+    if (hideRidden) p.set("unridden", "1");
     if (sortKey !== "drive") p.set("sort", sortKey);
     return p;
   }
@@ -1354,6 +1356,8 @@ addEventListener("DOMContentLoaded", () => {
     $("#q").value = f.q;
     f.water = p.get("water") === "1";
     f.nopass = p.get("nopass") === "1";
+    savedOnly = p.get("saved") === "1";
+    hideRidden = p.get("unridden") === "1";
     const sk = p.get("sort");
     if (sk && Object.hasOwn(SORTS, sk)) { sortKey = sk; $("#sort").value = sk; }
     ["dist", "gain", "grav", "drive", "fun"].forEach((k) => {
