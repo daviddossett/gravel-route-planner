@@ -272,6 +272,8 @@
 
   .list-head { display: flex; flex-wrap: wrap; row-gap: 6px; justify-content: space-between; align-items: center; padding: 10px 22px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--line); }
   .list-head button { font: 500 13px var(--sans); background: none; border: 0; color: var(--forest); cursor: pointer; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+  .list-head .backup { flex-basis: 100%; display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+  .list-head .backup button { min-height: 24px; min-width: 24px; }
   .list-head .sort { display: flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 14px; }
   .list-head .saved-toggle { white-space: nowrap; margin-right: 10px; order: 1; text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; min-height: 28px; color: var(--ink); }
   .list-head .saved-toggle[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
@@ -527,7 +529,11 @@
         <option value="fun-desc">Spiciest first</option>
         <option value="gravel">Most gravel</option>
       </select></label>
-      <button id="reset">Reset filters</button></div>
+      <button id="reset">Reset filters</button>
+      <span class="backup" role="group" aria-label="Back up Saved and Ridden routes">Back up:
+        <button type="button" id="export-marks">Export</button>
+        <button type="button" id="import-marks">Import</button>
+        <input type="file" id="import-file" accept=".json,application/json" hidden></span></div>
     <div class="list" id="list" role="listbox" aria-label="Matching routes"></div>
     <div class="empty" id="empty" hidden>Nothing out there fits all of that. Even the cows are confused. Try another month or <button type="button" id="reset2">reset filters</button>.
       <div id="empty-hints" hidden><p>Or loosen just one thing:</p><ul></ul></div></div>
@@ -1121,6 +1127,42 @@ addEventListener("DOMContentLoaded", () => {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast("GPX saved. The path is approximate.");
   }
+  // Back up / restore: Saved and Ridden ids travel as a small JSON file and merge on import.
+  function downloadMarks() {
+    const data = { version: 1, saved: [...saved], ridden: [...ridden] };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: "application/json" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: "gravel-atlas-routes.json" });
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast("Saved and ridden routes exported.");
+  }
+  function importMarks(text) {
+    let data;
+    try { data = JSON.parse(text); } catch { data = null; }
+    if (!data || typeof data !== "object" || !Array.isArray(data.saved) || !Array.isArray(data.ridden)) return toast("That file isn't a Gravel Atlas backup. Nothing changed.");
+    const known = new Set(ROUTES.map((r) => r.id));
+    const keep = (a) => a.filter((id) => typeof id === "string" && known.has(id));
+    const s = keep(data.saved), rd = keep(data.ridden);
+    const added = s.filter((id) => !saved.has(id)).length + rd.filter((id) => !ridden.has(id)).length;
+    s.forEach((id) => saved.add(id)); rd.forEach((id) => ridden.add(id));
+    persistSaved(); persistRidden();
+    if (selected) {
+      const sb = $("#save"), rb = $("#ridden");
+      if (sb) { const on = saved.has(selected); sb.setAttribute("aria-pressed", on); sb.textContent = on ? "★ Saved" : "☆ Save for later"; }
+      if (rb) { const on = ridden.has(selected); rb.setAttribute("aria-pressed", on); rb.textContent = on ? "✓ Ridden" : "Mark as ridden"; }
+    }
+    render();
+    toast(added ? `Imported ${added} route mark${added === 1 ? "" : "s"}.` : "Nothing new to import.");
+  }
+  $("#export-marks").onclick = downloadMarks;
+  $("#import-marks").onclick = () => $("#import-file").click();
+  $("#import-file").onchange = (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 256 * 1024) return toast("That file is too big to be a backup. Nothing changed.");
+    file.text().then(importMarks, () => toast("Couldn't read that file. Nothing changed."));
+  };
   function copyText(text, msg) {
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => toast(msg), () => toast("Couldn't access the clipboard"));
     else toast("Clipboard isn't available in this browser");
