@@ -304,6 +304,10 @@
   .panel-toggle { display: none; }
   #map { position: absolute; inset: 0; background: var(--map-bg); }
   #map .leaflet-tile-pane { filter: var(--tile-filter); }
+  .fit-results button { display: block; min-height: 32px; padding: 4px 10px; border: 0; border-radius: inherit; background: var(--paper); color: var(--ink); font: 600 13px var(--sans); cursor: pointer; }
+  .fit-results button:hover:not(:disabled) { background: color-mix(in srgb, var(--paper) 85%, var(--ink)); }
+  .fit-results button:disabled { color: var(--ink-2); cursor: not-allowed; }
+  .fit-results button:focus-visible { outline: 3px solid var(--forest); outline-offset: 1px; }
   .map-fallback { position: absolute; inset: 0; display: none; place-items: center; text-align: center; padding: 40px; color: var(--ink-2); }
   .map-fallback.svg { padding: 0; grid-template: 1fr / 1fr; place-items: stretch; background: #e4e6da; }
   .map-fallback svg { width: 100%; height: 100%; display: block; }
@@ -637,7 +641,7 @@ addEventListener("DOMContentLoaded", () => {
   let sortKey = "drive";
   $("#sort").addEventListener("change", (e) => { sortKey = e.target.value; render(); });
   $("#q").addEventListener("input", (e) => { f.q = e.target.value; render(); });
-  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; saveOrigin(); render(); };
+  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; saveOrigin(); render(); fitResults(); };
   $("#saved-toggle").addEventListener("click", () => { savedOnly = !savedOnly; render(); });
   $("#ridden-toggle").addEventListener("click", () => { hideRidden = !hideRidden; render(); });
   $("#reset").addEventListener("click", resetFilters);
@@ -686,6 +690,18 @@ addEventListener("DOMContentLoaded", () => {
       layers[r.id] = { group, line, casing, ants, pin };
     });
     map.fitBounds(L.latLngBounds(ROUTES.flatMap((r) => r.path)), { padding: [40, 40] });
+    const FitControl = L.Control.extend({
+      onAdd() {
+        const box = L.DomUtil.create("div", "leaflet-bar fit-results");
+        const b = L.DomUtil.create("button", "", box);
+        b.id = "fit-results"; b.type = "button"; b.textContent = "Fit map to results";
+        b.setAttribute("aria-label", "Fit map to results");
+        L.DomEvent.disableClickPropagation(box);
+        b.addEventListener("click", () => fitResults());
+        return box;
+      }
+    });
+    new FitControl({ position: "topright" }).addTo(map);
   } else {
     $("#fallback").style.display = "grid";
   }
@@ -793,6 +809,8 @@ addEventListener("DOMContentLoaded", () => {
     }
 
     if (offline) offline.update({ shown: shown.map((r) => r.id) });
+    const fitBtn = $("#fit-results");
+    if (fitBtn) fitBtn.disabled = !shown.length;
     if (map) {
       const ids = new Set(shown.map((r) => r.id));
       ROUTES.forEach((r) => {
@@ -863,6 +881,14 @@ addEventListener("DOMContentLoaded", () => {
     syncUrl();
     if (fly) flyToRoute(r);
     if (moveFocus) $("#drawer-title").focus({ preventScroll: true });
+  }
+
+  function fitResults() {
+    if (!map) return;
+    const pts = ROUTES.filter(matches).flatMap((r) => r.path);
+    if (!pts.length) return;
+    const opts = selected ? routePadding() : { padding: [40, 40] };
+    map.fitBounds(L.latLngBounds(pts), reduceMotion() ? { ...opts, animate: false } : opts);
   }
 
   function flyToRoute(r) {
