@@ -897,3 +897,31 @@ test("elevation profile shows a hover and keyboard readout and Esc hides it with
   await expect(readout).toHaveText("");
   await expect(drawer).toHaveClass(/\bopen\b/);
 });
+
+test("Has water on route hides routes with no water, round-trips through the URL and resets", async ({ page }) => {
+  await page.goto(PAGE + "?month=any");
+  await openList(page);
+  const toggle = page.locator("#water-toggle");
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+  const total = await rows.count();
+  const noWater = await page.evaluate(() => window.PNW_ROUTES.filter((r) => r.water === "none").length);
+  expect(noWater).toBeGreaterThan(0);
+  expect(page.url()).not.toContain("water=");
+
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  await expect(rows).toHaveCount(total - noWater);
+  await expect(page.locator("#count")).toHaveText(`${total - noWater} of ${total} routes`);
+  expect(page.url()).toContain("water=1");
+
+  await page.goto(PAGE + "?month=any&water=1");
+  await openList(page);
+  await expect(page.locator("#water-toggle")).toHaveAttribute("aria-pressed", "true");
+  await expect(rows).toHaveCount(total - noWater);
+
+  await page.locator("#reset").click();
+  await expect(page.locator("#water-toggle")).toHaveAttribute("aria-pressed", "false");
+  expect(page.url()).not.toContain("water=");
+});
