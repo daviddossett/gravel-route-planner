@@ -393,6 +393,15 @@ test("search box narrows the list, lands in the URL, restores from it and resets
   expect(new URL(page.url()).searchParams.has("q")).toBe(false);
 });
 
+test("search also matches a route's area", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  const rows = page.locator("#list .route");
+  await page.getByRole("searchbox", { name: "Search routes" }).fill("siuslaw");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("Mary's Peak Backside");
+});
+
 test("units toggle shows km and m in filters, list and drawer, and leaves the URL alone", async ({ page }) => {
   await page.goto(`${PAGE}?month=any`);
   await openList(page);
@@ -1046,4 +1055,14 @@ test("drawer Prev/Next step through the filtered list, wrap, and update the URL"
   await expect.poll(routeParam).toBe(ids[0]);
   await page.locator("#route-prev").click();
   await expect.poll(routeParam).toBe(ids[ids.length - 1]);
+});
+
+test("Pressing / focuses the search box without typing it, and is ignored inside text fields", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#list .route").first()).toBeAttached();
+  await page.keyboard.press("/");
+  await expect(page.locator("#q")).toBeFocused();
+  await expect(page.locator("#q")).toHaveValue("");
+  await page.keyboard.type("a/b");
+  await expect(page.locator("#q")).toHaveValue("a/b");
 });
