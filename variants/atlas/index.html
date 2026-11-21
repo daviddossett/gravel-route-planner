@@ -739,7 +739,7 @@ addEventListener("DOMContentLoaded", () => {
 
   function matches(r) {
     const q = f.q.trim().toLowerCase();
-    if (q && ![r.name, r.start, r.region].some((t) => t && t.toLowerCase().includes(q))) return false;
+    if (q && ![r.name, r.start, r.region, r.area].some((t) => t && t.toLowerCase().includes(q))) return false;
     if (f.month && !r.months.includes(f.month)) return false;
     if (f.state !== "all" && r.state !== f.state) return false;
     if (savedOnly && !saved.has(r.id)) return false;

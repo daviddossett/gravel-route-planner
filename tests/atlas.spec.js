@@ -423,6 +423,15 @@ test("search box narrows the list, lands in the URL, restores from it and resets
   expect(new URL(page.url()).searchParams.has("q")).toBe(false);
 });
 
+test("search also matches a route's area", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  const rows = page.locator("#list .route");
+  await page.getByRole("searchbox", { name: "Search routes" }).fill("siuslaw");
+  await expect(rows).toHaveCount(1);
+  await expect(rows.first()).toContainText("Mary's Peak Backside");
+});
+
 test("units toggle shows km and m in filters, list and drawer, and leaves the URL alone", async ({ page }) => {
   await page.goto(`${PAGE}?month=any`);
   await openList(page);
