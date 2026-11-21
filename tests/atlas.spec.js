@@ -787,6 +787,50 @@ test("sort order lands in the URL and is restored from a link", async ({ page })
   await expect(page.locator("#sort")).toHaveValue("drive");
 });
 
+test("Fits my tires filters the list by the saved tire size and clears with it", async ({ page }) => {
+  await page.goto(`${PAGE}?demo&month=any`);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeAttached();
+  const total = await rows.count();
+  const toggle = page.locator("#tire-toggle");
+  await expect(toggle).toBeHidden();
+
+  await page.locator("#my-tire").selectOption("42");
+  await page.keyboard.press("Escape"); // close the route drawer
+  await openList(page);
+  await expect(toggle).toBeVisible();
+  await toggle.focus();
+  await page.keyboard.press("Enter");
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  const fitting = await page.evaluate(() => window.PNW_ROUTES.filter((r) => r.tire <= 42).length);
+  await expect(page.locator("#count")).toContainText(`${fitting} of`);
+  const shown = await rows.count();
+  expect(shown).toBeLessThan(total);
+  expect(shown).toBeLessThanOrEqual(fitting);
+
+  await rows.first().focus();
+  await page.keyboard.press("Enter");
+  await page.locator("#my-tire").selectOption("50");
+  await page.keyboard.press("Escape");
+  await openList(page);
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  const fitting50 = await page.evaluate(() => window.PNW_ROUTES.filter((r) => r.tire <= 50).length);
+  await expect(page.locator("#count")).toContainText(`${fitting50} of`);
+
+  await toggle.click();
+  await expect(rows).toHaveCount(total);
+  await toggle.click();
+  await page.locator("#reset").click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+  await toggle.click();
+  await rows.first().focus();
+  await page.keyboard.press("Enter");
+  await page.locator("#my-tire").selectOption("0");
+  await expect(toggle).toBeHidden();
+  await expect(rows).toHaveCount(total);
+});
+
 test("Fit map to results zooms to the filtered routes and Reset re-fits all", async ({ page }) => {
   await page.goto(`${PAGE}?demo&month=any`);
   await openList(page);
@@ -823,4 +867,33 @@ test("Fit map to results zooms to the filtered routes and Reset re-fits all", as
   await closeList();
   const total = await page.locator("#list .route").count();
   await expect.poll(() => page.locator("#map .start-pin").count()).toBe(total);
+});
+
+test("elevation profile shows a hover and keyboard readout and Esc hides it without closing the drawer", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any&demo`);
+  await openList(page);
+  await page.locator("#list .route").first().click();
+  const drawer = page.locator("#drawer");
+  await expect(drawer).toHaveClass(/\bopen\b/);
+  const svg = drawer.locator(".profile svg");
+  const readout = drawer.locator("#profile-readout");
+  await svg.scrollIntoViewIfNeeded();
+  const box = await svg.boundingBox();
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
+  await expect(readout).toHaveText(/^Mile \d+ · [\d,]+ ft/);
+  await expect(svg.locator(".guide")).toHaveAttribute("visibility", "visible");
+
+  await page.mouse.move(0, 0);
+  await expect(readout).toHaveText("");
+  await svg.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(readout).toHaveText(/^Mile 0 · [\d,]+ ft/);
+  const first = await readout.textContent();
+  await page.keyboard.press("ArrowRight");
+  await expect(readout).not.toHaveText(first);
+  await expect(svg).toHaveAttribute("aria-valuetext", /^Mile \d+ · /);
+
+  await page.keyboard.press("Escape");
+  await expect(readout).toHaveText("");
+  await expect(drawer).toHaveClass(/\bopen\b/);
 });
