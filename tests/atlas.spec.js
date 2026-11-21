@@ -201,6 +201,36 @@ test("Route type filter limits the list, round-trips through the URL and resets"
   expect(page.url()).not.toContain("type=");
 });
 
+test("Region filter limits the list, round-trips through the URL and resets", async ({ page }) => {
+  await page.goto(PAGE);
+  await openList(page);
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  await expect(page.locator("#region")).toHaveValue("all");
+  const total = await page.locator("#list .route").count();
+  const regions = () => page.locator("#list .route .where").evaluateAll((els) => els.map((e) => e.textContent.split(" · ")[1].split(",")[0].trim()));
+
+  await page.locator("#region").selectOption("Cascades");
+  await expect(page.locator("#list .route")).not.toHaveCount(total);
+  const shown = await regions();
+  expect(shown.length).toBeGreaterThan(0);
+  for (const k of shown) expect(k).toBe("Cascades");
+  expect(page.url()).toContain("region=Cascades");
+
+  await page.goto(PAGE + "?region=Cascades");
+  await openList(page);
+  await expect(page.locator("#region")).toHaveValue("Cascades");
+  expect(await regions()).toEqual(shown);
+
+  await page.goto(PAGE + "?region=Bogus");
+  await expect(page.locator("#region")).toHaveValue("all");
+
+  await page.goto(PAGE + "?region=Cascades");
+  await openList(page);
+  await page.locator("#reset").click();
+  await expect(page.locator("#region")).toHaveValue("all");
+  expect(page.url()).not.toContain("region=");
+});
+
 test("sort control reorders the route list", async ({ page }) => {
   await page.goto(PAGE);
   await openList(page);
