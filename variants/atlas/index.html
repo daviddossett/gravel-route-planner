@@ -501,7 +501,7 @@
 
     <section class="filters" aria-label="Filters">
       <label class="field"><span class="field-head">Search routes</span>
-        <input type="search" id="q" placeholder="Name, town, or area" autocomplete="off"></label>
+        <input type="search" id="q" placeholder="Name, town, or area (press /)" aria-keyshortcuts="/" autocomplete="off"></label>
       <div class="field">
         <div class="field-head"><span id="month-label">Riding in</span><output id="month-out"></output></div>
         <div class="months" role="group" aria-labelledby="month-label" id="months"></div>
@@ -1384,6 +1384,14 @@ addEventListener("DOMContentLoaded", () => {
   }
   let tt; function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
   document.addEventListener("keydown", (e) => {
+    if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.defaultPrevented) {
+      const a = document.activeElement;
+      if (a && (/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName) || a.isContentEditable)) return;
+      e.preventDefault();
+      if (isPhone()) setPanel(true);
+      $("#q").focus();
+      return;
+    }
     if (e.key !== "Escape") return;
     if (appEl.classList.contains("panel-open")) { setPanel(false); panelToggle.focus(); return; }
     if (!selected) return;

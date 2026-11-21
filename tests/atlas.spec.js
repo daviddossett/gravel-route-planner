@@ -346,6 +346,16 @@ test("state and month filters narrow the list and the count", async ({ page }) =
   await expect(page.locator("#count")).toHaveText(new RegExp(`^${wa} of \\d+ routes$`));
 });
 
+test("pressing / focuses the search box, but types a slash when already typing", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  const box = page.getByRole("searchbox", { name: "Search routes" });
+  await page.keyboard.press("/");
+  await expect(box).toBeFocused();
+  await expect(box).toHaveValue("");
+  await page.keyboard.type("a/b");
+  await expect(box).toHaveValue("a/b");
+});
+
 test("search box narrows the list, lands in the URL, restores from it and resets", async ({ page }) => {
   await page.goto(`${PAGE}?month=any`);
   await openList(page);

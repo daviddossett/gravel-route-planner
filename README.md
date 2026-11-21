@@ -18,6 +18,8 @@ python3 -m http.server 4173
 
 Then open http://localhost:4173/variants/atlas/.
 
+Press `/` anywhere on the page to jump to the route search box.
+
 You can also open `variants/atlas/index.html` directly (`file://`). Leaflet and the IBM Plex fonts are self-hosted in [`vendor/`](vendor/), so only the OpenTopoMap tiles need an internet connection; without one, the route list still works.
 
 ### Offline
