@@ -279,7 +279,7 @@
   .list-head .saved-toggle { white-space: nowrap; margin-right: 10px; order: 1; text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; min-height: 28px; color: var(--ink); }
   .list-head .saved-toggle[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
   .saved-tag { white-space: nowrap; font: 700 11px/1 var(--sans); letter-spacing: .02em; color: var(--forest); margin-left: 4px; }
-  .list-head select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
+  .filters select, .list-head select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
   .list { overflow-y: auto; flex: 1; min-height: 0; }
   .route { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 22px; border-bottom: 1px solid var(--line); cursor: pointer; background: transparent; transition: background .15s; }
   .route:hover { background: var(--paper-2); }
@@ -529,6 +529,13 @@
       <div class="row-2">
         <label class="field"><span class="field-head">Max fun type <output id="fun-out"></output></span>
           <input type="range" id="fun" min="1" max="5" step="1" value="5"></label>
+        <label class="field"><span class="field-head">Route type</span>
+          <select id="type">
+            <option value="all">Any</option>
+            <option value="loop">Loop</option>
+            <option value="out-and-back">Out-and-back</option>
+            <option value="point-to-point">Point-to-point</option>
+          </select></label>
       </div>
       <div class="seg" role="group" aria-label="Drive time measured from" id="origin">
         <button data-v="sea" aria-pressed="true">Seattle</button>
@@ -584,7 +591,7 @@ addEventListener("DOMContentLoaded", () => {
   const MONTHS = ["J","F","M","A","M","J","J","A","S","O","N","D"];
   const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const $ = (s) => document.querySelector(s);
-  const defaults = { q: "", month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, fun: 5, origin: "sea", water: false, nopass: false };
+  const defaults = { q: "", month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, fun: 5, type: "all", origin: "sea", water: false, nopass: false };
   const ORIGIN_KEY = "atlas.origin";
   // localStorage can throw (private mode, blocked storage); fall back to the default.
   const loadOrigin = () => { try { const v = localStorage.getItem(ORIGIN_KEY); return ["sea", "pdx", "any"].includes(v) ? v : null; } catch { return null; } };
@@ -650,6 +657,7 @@ addEventListener("DOMContentLoaded", () => {
   };
   let sortKey = "drive";
   $("#sort").addEventListener("change", (e) => { sortKey = e.target.value; render(); });
+  $("#type").addEventListener("change", (e) => { f.type = e.target.value; render(); });
   $("#q").addEventListener("input", (e) => { f.q = e.target.value; render(); });
   const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; fitTires = false; saveOrigin(); render(); fitResults(); };
   $("#saved-toggle").addEventListener("click", () => { savedOnly = !savedOnly; render(); });
@@ -728,6 +736,7 @@ addEventListener("DOMContentLoaded", () => {
     if (savedOnly && !saved.has(r.id)) return false;
     if (hideRidden && ridden.has(r.id)) return false;
     if (fitTires && myTire && r.tire > myTire) return false; // same rule as tireFitText: gap <= 0 is a fit
+    if (f.type !== "all" && r.type !== f.type) return false;
     if (f.water && r.water === "none") return false;
     if (f.nopass && r.pass) return false;
     if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav || r.difficulty > f.fun) return false;
@@ -743,6 +752,7 @@ addEventListener("DOMContentLoaded", () => {
     ["Any climbing", () => f.gain < 6000, () => { f.gain = 6000; }],
     ["Any gravel share", () => f.grav > 0, () => { f.grav = 0; }],
     ["Any fun type", () => f.fun < 5, () => { f.fun = 5; }],
+    ["Any route type", () => f.type !== "all", () => { f.type = "all"; }],
     ["Any drive time", () => f.drive < 7, () => { f.drive = 7; }],
     ["All routes, not just saved", () => savedOnly, () => { savedOnly = false; }],
     ["Include ridden routes", () => hideRidden, () => { hideRidden = false; }],
@@ -778,6 +788,7 @@ addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("#state button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === f.state));
     document.querySelectorAll("#origin button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === f.origin));
     ["dist", "gain", "grav", "drive", "fun"].forEach((k) => $("#" + k).value = f[k]);
+    $("#type").value = f.type;
     $("#dist-out").textContent = `${distV(f.dist)} ${distU()}`;
     $("#gain-out").textContent = `${elevV(f.gain)} ${elevU()}`;
     $("#grav-out").textContent = `${f.grav}%`;
@@ -1319,7 +1330,7 @@ addEventListener("DOMContentLoaded", () => {
     const p = new URLSearchParams();
     if (selected) p.set("route", selected);
     const q = f.q.trim();
-    const changed = ["state", "dist", "gain", "grav", "drive", "fun"].filter((k) => f[k] !== defaults[k]);
+    const changed = ["state", "type", "dist", "gain", "grav", "drive", "fun"].filter((k) => f[k] !== defaults[k]);
     // Pin month and origin on any shared state so the link reads the same whatever the viewer's current month or saved origin.
     if (selected || changed.length || f.month !== defaults.month || f.origin !== defaults.origin) {
       p.set("month", f.month || "any");
@@ -1349,6 +1360,8 @@ addEventListener("DOMContentLoaded", () => {
     if (m === "any") f.month = 0;
     else if (/^\d{1,2}$/.test(m) && +m >= 1 && +m <= 12) f.month = +m;
     if (segValues("state").includes(p.get("state"))) f.state = p.get("state");
+    const t = p.get("type");
+    if (t && Object.hasOwn(TYPE, t)) f.type = t;
     if (segValues("origin").includes(p.get("origin"))) f.origin = p.get("origin");
     f.q = (p.get("q") || "").trim().slice(0, 100);
     $("#q").value = f.q;

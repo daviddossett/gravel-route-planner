@@ -171,6 +171,36 @@ test("Max fun type filter limits the list, round-trips through the URL and reset
   expect(page.url()).not.toContain("fun=");
 });
 
+test("Route type filter limits the list, round-trips through the URL and resets", async ({ page }) => {
+  await page.goto(PAGE);
+  await openList(page);
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  await expect(page.locator("#type")).toHaveValue("all");
+  const total = await page.locator("#list .route").count();
+  const kinds = () => page.locator("#list .route .where").evaluateAll((els) => els.map((e) => e.textContent.split(" · ")[0].trim()));
+
+  await page.locator("#type").selectOption("loop");
+  await expect(page.locator("#list .route")).not.toHaveCount(total);
+  const shown = await kinds();
+  expect(shown.length).toBeGreaterThan(0);
+  for (const k of shown) expect(k).toBe("Loop");
+  expect(page.url()).toContain("type=loop");
+
+  await page.goto(PAGE + "?type=loop");
+  await openList(page);
+  await expect(page.locator("#type")).toHaveValue("loop");
+  expect(await kinds()).toEqual(shown);
+
+  await page.goto(PAGE + "?type=bogus");
+  await expect(page.locator("#type")).toHaveValue("all");
+
+  await page.goto(PAGE + "?type=loop");
+  await openList(page);
+  await page.locator("#reset").click();
+  await expect(page.locator("#type")).toHaveValue("all");
+  expect(page.url()).not.toContain("type=");
+});
+
 test("sort control reorders the route list", async ({ page }) => {
   await page.goto(PAGE);
   await openList(page);
