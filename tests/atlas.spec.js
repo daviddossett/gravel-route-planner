@@ -723,3 +723,47 @@ test("sort order lands in the URL and is restored from a link", async ({ page })
   await page.goto(`${PAGE}?month=any&sort=bogus`);
   await expect(page.locator("#sort")).toHaveValue("drive");
 });
+
+test("Fits my tires filters the list by the saved tire size and clears with it", async ({ page }) => {
+  await page.goto(`${PAGE}?demo&month=any`);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeAttached();
+  const total = await rows.count();
+  const toggle = page.locator("#tire-toggle");
+  await expect(toggle).toBeHidden();
+
+  await page.locator("#my-tire").selectOption("42");
+  await page.keyboard.press("Escape"); // close the route drawer
+  await openList(page);
+  await expect(toggle).toBeVisible();
+  await toggle.focus();
+  await page.keyboard.press("Enter");
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  const fitting = await page.evaluate(() => window.PNW_ROUTES.filter((r) => r.tire <= 42).length);
+  await expect(page.locator("#count")).toContainText(`${fitting} of`);
+  const shown = await rows.count();
+  expect(shown).toBeLessThan(total);
+  expect(shown).toBeLessThanOrEqual(fitting);
+
+  await rows.first().focus();
+  await page.keyboard.press("Enter");
+  await page.locator("#my-tire").selectOption("50");
+  await page.keyboard.press("Escape");
+  await openList(page);
+  await expect(toggle).toHaveAttribute("aria-pressed", "true");
+  const fitting50 = await page.evaluate(() => window.PNW_ROUTES.filter((r) => r.tire <= 50).length);
+  await expect(page.locator("#count")).toContainText(`${fitting50} of`);
+
+  await toggle.click();
+  await expect(rows).toHaveCount(total);
+  await toggle.click();
+  await page.locator("#reset").click();
+  await expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+  await toggle.click();
+  await rows.first().focus();
+  await page.keyboard.press("Enter");
+  await page.locator("#my-tire").selectOption("0");
+  await expect(toggle).toBeHidden();
+  await expect(rows).toHaveCount(total);
+});

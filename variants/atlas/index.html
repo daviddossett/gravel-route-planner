@@ -529,6 +529,7 @@
     <div class="list-head"><span id="count" aria-live="polite"></span>
       <button type="button" class="saved-toggle" id="saved-toggle" aria-pressed="false" hidden></button>
       <button type="button" class="saved-toggle" id="ridden-toggle" aria-pressed="false" hidden></button>
+      <button type="button" class="saved-toggle" id="tire-toggle" aria-pressed="false" hidden>Fits my tires</button>
       <label class="sort">Sort <select id="sort">
         <option value="drive">Closest drive</option>
         <option value="miles">Shortest distance</option>
@@ -582,7 +583,7 @@ addEventListener("DOMContentLoaded", () => {
   const RIDDEN_KEY = "atlas.ridden";
   const ridden = new Set((() => { try { const v = JSON.parse(localStorage.getItem(RIDDEN_KEY)); return Array.isArray(v) ? v : []; } catch { return []; } })());
   const persistRidden = () => { try { localStorage.setItem(RIDDEN_KEY, JSON.stringify([...ridden])); } catch {} };
-  let savedOnly = false, hideRidden = false;
+  let savedOnly = false, hideRidden = false, fitTires = false;
   let selected = null;
   let active = null; // the one route row in the tab order (roving tabindex)
   let returnTo = null; // where focus goes when the drawer closes
@@ -637,9 +638,10 @@ addEventListener("DOMContentLoaded", () => {
   let sortKey = "drive";
   $("#sort").addEventListener("change", (e) => { sortKey = e.target.value; render(); });
   $("#q").addEventListener("input", (e) => { f.q = e.target.value; render(); });
-  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; saveOrigin(); render(); };
+  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; fitTires = false; saveOrigin(); render(); };
   $("#saved-toggle").addEventListener("click", () => { savedOnly = !savedOnly; render(); });
   $("#ridden-toggle").addEventListener("click", () => { hideRidden = !hideRidden; render(); });
+  $("#tire-toggle").addEventListener("click", () => { fitTires = !fitTires; render(); });
   $("#reset").addEventListener("click", resetFilters);
   $("#reset2").addEventListener("click", resetFilters);
   $("#empty-hints").addEventListener("click", (e) => {
@@ -698,6 +700,7 @@ addEventListener("DOMContentLoaded", () => {
     if (f.state !== "all" && r.state !== f.state) return false;
     if (savedOnly && !saved.has(r.id)) return false;
     if (hideRidden && ridden.has(r.id)) return false;
+    if (fitTires && myTire && r.tire > myTire) return false; // same rule as tireFitText: gap <= 0 is a fit
     if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav) return false;
     return f.drive >= 7 || driveFrom(r).h <= f.drive; // 7 h = "any"
   }
@@ -713,16 +716,17 @@ addEventListener("DOMContentLoaded", () => {
     ["Any drive time", () => f.drive < 7, () => { f.drive = 7; }],
     ["All routes, not just saved", () => savedOnly, () => { savedOnly = false; }],
     ["Include ridden routes", () => hideRidden, () => { hideRidden = false; }],
+    ["Any tire size", () => fitTires, () => { fitTires = false; }],
   ];
   function looseningHints() {
-    const snap = () => [{ ...f }, savedOnly, hideRidden];
-    const [f0, s0, h0] = snap();
+    const snap = () => [{ ...f }, savedOnly, hideRidden, fitTires];
+    const [f0, s0, h0, t0] = snap();
     const hints = [];
     LOOSEN.forEach(([label, active, relax], i) => {
       if (!active()) return;
       relax();
       const n = ROUTES.filter(matches).length;
-      Object.assign(f, f0); savedOnly = s0; hideRidden = h0;
+      Object.assign(f, f0); savedOnly = s0; hideRidden = h0; fitTires = t0;
       if (n) hints.push({ label, n, i });
     });
     return hints.sort((a, b) => b.n - a.n).slice(0, 4);
@@ -759,6 +763,11 @@ addEventListener("DOMContentLoaded", () => {
     rt.hidden = !riddenKnown;
     rt.textContent = "Not ridden yet";
     rt.setAttribute("aria-pressed", hideRidden);
+    if (!myTire) fitTires = false;
+    const tt = $("#tire-toggle");
+    tt.hidden = !myTire;
+    tt.textContent = myTire ? `Fits my ${myTire} mm tires` : "Fits my tires";
+    tt.setAttribute("aria-pressed", fitTires);
     const shown = ROUTES.filter(matches).sort(SORTS[sortKey]);
     $("#count").textContent = `${shown.length} of ${ROUTES.length} routes`;
 
@@ -1084,6 +1093,7 @@ addEventListener("DOMContentLoaded", () => {
       myTire = Number(e.target.value);
       try { myTire ? localStorage.setItem(TIRE_KEY, myTire) : localStorage.removeItem(TIRE_KEY); } catch {}
       d.querySelector("#tire-fit").textContent = tireFitText(r);
+      render();
     };
     d.querySelector("#compare-with").onchange = (e) => {
       const other = ROUTES.find((x) => x.id === e.target.value);
