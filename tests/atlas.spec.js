@@ -1107,3 +1107,23 @@ test("Pressing / focuses the search box without typing it, and is ignored inside
   await page.keyboard.type("a/b");
   await expect(page.locator("#q")).toHaveValue("a/b");
 });
+
+test("page title follows the selected route and resets when the drawer closes", async ({ page }) => {
+  const DEFAULT = "Gravel Atlas · Pacific Northwest";
+  await page.goto(`${PAGE}?route=gales-creek`);
+  const name = (await page.locator("#drawer-title").innerText()).trim();
+  await expect(page).toHaveTitle(`${name} · Gravel Atlas`);
+  await page.keyboard.press("Escape");
+  await expect(page).toHaveTitle(DEFAULT);
+  await page.goto(`${PAGE}?route=no-such-route`);
+  await expect(page).toHaveTitle(DEFAULT);
+  await page.goto(`${PAGE}?demo`);
+  await openList(page);
+  await page.locator("#list .route").nth(1).click();
+  const first = (await page.locator("#drawer-title").innerText()).trim();
+  await expect(page).toHaveTitle(`${first} · Gravel Atlas`);
+  await page.locator("#route-next").click();
+  const second = (await page.locator("#drawer-title").innerText()).trim();
+  expect(second).not.toBe(first);
+  await expect(page).toHaveTitle(`${second} · Gravel Atlas`);
+});

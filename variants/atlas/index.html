@@ -1389,6 +1389,8 @@ addEventListener("DOMContentLoaded", () => {
     return location.href.split(/[?#]/)[0] + (q ? `?${q}` : "");
   }
   function syncUrl() {
+    const sel = selected && ROUTES.find((x) => x.id === selected);
+    document.title = sel ? `${sel.name} · Gravel Atlas` : "Gravel Atlas · Pacific Northwest";
     const p = stateParams();
     if (new URLSearchParams(location.search).has("demo")) p.set("demo", "");
     const q = p.toString().replace(/demo=(&|$)/, "demo$1");
