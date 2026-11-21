@@ -1027,3 +1027,13 @@ test("Saved and Not ridden yet toggles persist in the URL and restore on load", 
   await page.locator("#ridden-toggle").click();
   await expect.poll(() => params().has("saved") || params().has("unridden")).toBe(false);
 });
+
+test("Pressing / focuses the search box without typing it, and is ignored inside text fields", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#list .route").first()).toBeAttached();
+  await page.keyboard.press("/");
+  await expect(page.locator("#q")).toBeFocused();
+  await expect(page.locator("#q")).toHaveValue("");
+  await page.keyboard.type("a/b");
+  await expect(page.locator("#q")).toHaveValue("a/b");
+});
