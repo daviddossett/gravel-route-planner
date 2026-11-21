@@ -139,6 +139,38 @@ test("empty state keeps the listbox free of non-option children and reset works"
   await expect(page.locator("#count")).toHaveText(/^(\d+) of \1 routes$/);
 });
 
+test("Max fun type filter limits the list, round-trips through the URL and resets", async ({ page }) => {
+  await page.goto(PAGE);
+  await openList(page);
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  await expect(page.locator("#fun")).toHaveValue("5");
+  await expect(page.locator("#fun-out")).toHaveText("any");
+  const total = await page.locator("#list .route").count();
+  const labels = () => page.locator("#list .route .fun").allTextContents();
+
+  await page.locator("#fun").fill("2");
+  await expect(page.locator("#fun-out")).toHaveText("≤ Cruisy");
+  const shown = await labels();
+  expect(shown.length).toBeGreaterThan(0);
+  expect(shown.length).toBeLessThan(total);
+  for (const l of shown) expect(["Chill", "Cruisy"]).toContain(l);
+  expect(page.url()).toContain("fun=2");
+
+  await page.goto(PAGE + "?fun=2");
+  await openList(page);
+  await expect(page.locator("#fun")).toHaveValue("2");
+  expect(await labels()).toEqual(shown);
+
+  await page.goto(PAGE + "?fun=bogus");
+  await expect(page.locator("#fun")).toHaveValue("5");
+
+  await page.goto(PAGE + "?fun=2");
+  await openList(page);
+  await page.locator("#reset").click();
+  await expect(page.locator("#fun")).toHaveValue("5");
+  expect(page.url()).not.toContain("fun=");
+});
+
 test("sort control reorders the route list", async ({ page }) => {
   await page.goto(PAGE);
   await openList(page);
