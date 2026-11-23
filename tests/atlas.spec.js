@@ -381,6 +381,19 @@ test("Longest distance and Most climbing sort descending", async ({ page }) => {
   }
 });
 
+test("Steepest per mile sort shows the climbing rate on rows and follows Units", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  const nums = page.locator("#list .route .nums").first();
+  await expect(nums).not.toContainText("/mi");
+  await page.locator("#sort").selectOption("steep");
+  await expect(nums).toContainText(/~\d+ ft\/mi/);
+  await page.locator("#units").selectOption("metric");
+  await expect(nums).toContainText(/~\d+ m\/km/);
+  await page.locator("#sort").selectOption("drive");
+  await expect(page.locator("#list .route .nums").first()).not.toContainText(/\/km|\/mi/);
+});
+
 test("on phones the route list is a toggleable overlay over a full-height map", async ({ page }) => {
   test.skip(!(page.viewportSize() && page.viewportSize().width <= 760), "phone layout only");
   await page.goto(PAGE);
