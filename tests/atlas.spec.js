@@ -1256,6 +1256,43 @@ test("j / k step through routes like Next / Prev and are ignored while typing", 
   expect([ids[1], ids[ids.length - 1]]).not.toContain(routeParam());
 });
 
+test("s saves and r marks ridden for the selected route, and are ignored while typing or with modifiers", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  const id = await page.locator("#list .route").first().evaluate((el) => el.dataset.id);
+  await page.locator(`#list .route[data-id="${id}"]`).evaluate((el) => el.click());
+  const save = page.locator("#save");
+  const ridden = page.locator("#ridden");
+  await expect(save).toHaveAttribute("aria-keyshortcuts", "s");
+  await expect(ridden).toHaveAttribute("aria-keyshortcuts", "r");
+  await expect(save).toHaveAttribute("aria-pressed", "false");
+
+  await page.keyboard.press("s");
+  await expect(save).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("r");
+  await expect(ridden).toHaveAttribute("aria-pressed", "true");
+  await page.reload();
+  await expect(page.locator("#save")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#ridden")).toHaveAttribute("aria-pressed", "true");
+
+  await page.keyboard.press("Control+s");
+  await expect(page.locator("#save")).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("s");
+  await expect(page.locator("#save")).toHaveAttribute("aria-pressed", "false");
+
+  await openList(page);
+  await page.locator("#q").focus();
+  await page.keyboard.type("sr");
+  await expect(page.locator("#q")).toHaveValue("sr");
+  await expect(page.locator("#ridden")).toHaveAttribute("aria-pressed", "true");
+
+  await page.evaluate(() => document.activeElement.blur());
+  await page.keyboard.press("?");
+  await expect(page.locator("#help")).toContainText("Save or unsave");
+  await page.keyboard.press("r");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#ridden")).toHaveAttribute("aria-pressed", "true");
+});
+
 test("j selects the first route when nothing is selected and k does nothing", async ({ page }) => {
   await page.goto(`${PAGE}?demo`);
   await page.keyboard.press("Escape");

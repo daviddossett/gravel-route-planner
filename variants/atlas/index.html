@@ -634,6 +634,8 @@
       <dl>
         <dt><kbd>/</kbd></dt><dd>Search routes</dd>
         <dt><kbd>J</kbd> / <kbd>K</kbd></dt><dd>Next / previous route</dd>
+        <dt><kbd>S</kbd></dt><dd>Save or unsave the selected route</dd>
+        <dt><kbd>R</kbd></dt><dd>Mark the selected route ridden or not</dd>
         <dt><kbd>Esc</kbd></dt><dd>Clear search, close the drawer or route list</dd>
         <dt><kbd>?</kbd></dt><dd>Show or hide this help</dd>
       </dl>
@@ -1322,8 +1324,8 @@ addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="actions">
           <button class="btn" id="copy">Copy ride brief</button>
-          <button class="btn ghost" id="save" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save for later"}</button>
-          <button class="btn ghost" id="ridden" type="button" aria-pressed="${ridden.has(r.id)}">${ridden.has(r.id) ? "✓ Ridden" : "Mark as ridden"}</button>
+          <button class="btn ghost" id="save" aria-keyshortcuts="s" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save for later"}</button>
+          <button class="btn ghost" id="ridden" type="button" aria-keyshortcuts="r" aria-pressed="${ridden.has(r.id)}">${ridden.has(r.id) ? "✓ Ridden" : "Mark as ridden"}</button>
           <button class="btn ghost" id="copy-link">Copy link</button>
           ${typeof navigator.share === "function" ? '<button class="btn ghost" id="share" type="button">Share</button>' : ""}
           <button class="btn ghost" id="zoom">Zoom to route</button>
@@ -1670,6 +1672,13 @@ addEventListener("DOMContentLoaded", () => {
       if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
       if (selected) stepRoute(e.key === "j" ? 1 : -1);
       else if (e.key === "j") { const first = listOrder()[0]; if (first) select(first.id, true, true); }
+      return;
+    }
+    if ((e.key === "s" || e.key === "r") && !e.ctrlKey && !e.metaKey && !e.altKey && !e.defaultPrevented) {
+      const a = document.activeElement;
+      if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
+      const btn = selected && $(e.key === "s" ? "#save" : "#ridden");
+      if (btn) { e.preventDefault(); btn.click(); }
       return;
     }
     if (e.key !== "Escape") return;
