@@ -1817,3 +1817,18 @@ test("State and Route type options show counts that follow the other filters", a
   await expect(page.locator('#type option[value="all"]')).toHaveText(`Any (${await num(wa)})`);
   await expect(page.locator("#type")).toHaveValue("all");
 });
+
+test("forced-colors mode keeps the selected row and pressed toggles visibly marked", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#list .route").first()).toBeAttached();
+
+  const widths = (sel) => page.locator(sel).first().evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { border: parseFloat(s.borderTopWidth) || 0, outline: s.outlineStyle === "none" ? 0 : parseFloat(s.outlineWidth) || 0 };
+  });
+  const row = await widths('#list .route[aria-selected="true"]');
+  expect(row.border + row.outline).toBeGreaterThan(0);
+  const toggle = await widths('[aria-pressed="true"]');
+  expect(toggle.border + toggle.outline).toBeGreaterThan(0);
+});

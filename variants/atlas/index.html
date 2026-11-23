@@ -513,6 +513,15 @@
   .help-dialog kbd { font-family: var(--mono); font-size: 12px; padding: 2px 6px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
   .help-dialog button { font: inherit; font-size: 13px; padding: 6px 14px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
   @media print { .help-overlay { display: none !important; } }
+  /* Forced colors drops backgrounds, so selection and pressed state need border/outline cues. */
+  @media (forced-colors: active) {
+    .route[aria-selected="true"] { outline: 3px solid Highlight; outline-offset: -3px; }
+    .route[aria-selected="true"] h2 { color: Highlight; }
+    [aria-pressed="true"] { border: 2px solid Highlight; color: Highlight; font-weight: 700; }
+    .months button[aria-pressed="true"], .seg button[aria-pressed="true"],
+    .saved-toggle[aria-pressed="true"], .btn[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: ButtonText; }
+    button:focus-visible, input:focus-visible, select:focus-visible, .route:focus-visible, .profile svg:focus-visible, .fit-results button:focus-visible, .panel-toggle:focus-visible { outline: 3px solid CanvasText; outline-offset: 2px; box-shadow: 0 0 0 5px Canvas; }
+  }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
