@@ -271,6 +271,22 @@ test("Route type filter limits the list, round-trips through the URL and resets"
   expect(page.url()).not.toContain("type=");
 });
 
+test("Region options show static route counts and keep plain values", async ({ page }) => {
+  await page.goto(PAGE);
+  await openList(page);
+  const opts = await page.locator("#region option").evaluateAll((els) => els.map((e) => ({ value: e.value, text: e.textContent })));
+  const counts = await page.evaluate(() => {
+    const c = {};
+    window.PNW_ROUTES.forEach((r) => { if (r.region) c[r.region] = (c[r.region] || 0) + 1; });
+    return { c, total: window.PNW_ROUTES.length };
+  });
+  expect(opts[0]).toEqual({ value: "all", text: `Any (${counts.total})` });
+  expect(opts.length - 1).toBe(Object.keys(counts.c).length);
+  for (const o of opts.slice(1)) expect(o.text).toBe(`${o.value} (${counts.c[o.value]})`);
+  await page.locator("#region").selectOption("Cascades");
+  expect((await page.locator("#region option").first().textContent())).toBe(`Any (${counts.total})`);
+});
+
 test("Region filter limits the list, round-trips through the URL and resets", async ({ page }) => {
   await page.goto(PAGE);
   await openList(page);
