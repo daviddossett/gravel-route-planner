@@ -69,6 +69,15 @@ test("saving and marking a route ridden restyles its map pin", async ({ page }) 
   await expect(pin).toHaveClass(/saved/);
   await page.locator("#ridden").click();
   await expect(pin).toHaveClass(/ridden/);
+  const rust = await page.evaluate(() => {
+    const t = document.createElement("i");
+    t.style.color = "var(--rust)";
+    document.body.append(t);
+    const c = getComputedStyle(t).color;
+    t.remove();
+    return c;
+  });
+  await expect(pin).toHaveCSS("border-top-color", rust);
   await page.locator("#save").click();
   await expect(pin).not.toHaveClass(/saved/);
 });
@@ -1187,6 +1196,43 @@ test("page title follows the selected route and resets when the drawer closes", 
   const second = (await page.locator("#drawer-title").innerText()).trim();
   expect(second).not.toBe(first);
   await expect(page).toHaveTitle(`${second} · Gravel Atlas`);
+});
+
+test("filters and sort persist between visits, the URL wins, and Reset clears them", async ({ page }) => {
+  await page.goto(PAGE);
+  await openList(page);
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  await page.locator("#region").selectOption("Cascades");
+  await page.locator("#sort").selectOption("miles");
+  await page.locator("#water-toggle").click();
+  const stored = await page.evaluate(() => localStorage.getItem("atlas.filters"));
+  expect(stored).toContain("region=Cascades");
+  expect(stored).not.toContain("route=");
+
+  await page.goto(PAGE);
+  await expect(page.locator("#region")).toHaveValue("Cascades");
+  await expect(page.locator("#sort")).toHaveValue("miles");
+  expect(page.url()).toContain("region=Cascades");
+
+  // Any filter param in the URL wins over the saved state.
+  await page.goto(PAGE + "?state=WA");
+  await expect(page.locator("#region")).toHaveValue("all");
+  await expect(page.locator("#sort")).toHaveValue("drive");
+
+  // The selected route is not persisted.
+  await page.goto(PAGE);
+  await expect(page.locator("#region")).toHaveValue("Cascades");
+  await openList(page);
+  await page.locator("#list .route").first().click();
+  expect(await page.evaluate(() => localStorage.getItem("atlas.filters"))).not.toContain("route=");
+
+  await page.keyboard.press("Escape");
+  await openList(page);
+  await page.locator("#reset").click();
+  expect(await page.evaluate(() => localStorage.getItem("atlas.filters"))).toBeNull();
+  await page.goto(PAGE);
+  await expect(page.locator("#region")).toHaveValue("all");
+  await expect(page.locator("#sort")).toHaveValue("drive");
 });
 
 test("mobile Routes toggle shows the active filter count and clears on reset", async ({ page }) => {
