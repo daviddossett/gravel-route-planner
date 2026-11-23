@@ -615,6 +615,7 @@
     <div class="chips" id="chips" role="group" aria-label="Active filters" hidden></div>
     <div class="badges" id="badges" hidden>
       <button type="button" id="badges-toggle" aria-expanded="false" aria-controls="badges-list"></button>
+      <p id="ridden-totals"></p>
       <ul id="badges-list" hidden></ul>
     </div>
     <div class="list" id="list" role="listbox" aria-label="Matching routes"></div>
@@ -947,6 +948,8 @@ addEventListener("DOMContentLoaded", () => {
     bd.hidden = !earned.length;
     if (earned.length) {
       $("#badges-toggle").textContent = `Badges earned: ${earned.length} of ${ROUTES.length}`;
+      const mi = earned.reduce((n, r) => n + r.miles, 0), ft = earned.reduce((n, r) => n + r.gain, 0);
+      $("#ridden-totals").textContent = `Ridden: ${earned.length} ${earned.length === 1 ? "route" : "routes"} · ${distV(mi)} ${distU()} · ${elevV(ft)} ${elevU()} climbed`;
       const bl = $("#badges-list");
       bl.replaceChildren(...earned.map((r) => { const li = document.createElement("li"); li.textContent = `${r.badge} (${r.name})`; return li; }));
     }

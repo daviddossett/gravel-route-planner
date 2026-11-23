@@ -973,6 +973,31 @@ test("badges earned tally follows Ridden marks, ignores filters, and expands", a
   await expect(page.locator("#badges-list")).toBeHidden();
 });
 
+test("Ridden totals line sums miles and climbing, follows units, and hides when empty", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#list .route").first()).toBeAttached();
+  const line = page.locator("#ridden-totals");
+  await expect(line).toBeHidden();
+  const ids = await page.evaluate(() => window.PNW_ROUTES.slice(0, 2).map((r) => ({ id: r.id, miles: r.miles, gain: r.gain })));
+  const mi = ids[0].miles + ids[1].miles, ft = ids[0].gain + ids[1].gain;
+  for (const { id } of ids) {
+    await page.goto(`${PAGE}?demo&route=${id}`);
+    await page.locator("#ridden").click();
+    await page.keyboard.press("Escape");
+  }
+  await openList(page);
+  await expect(line).toHaveText(`Ridden: 2 routes · ${mi.toLocaleString("en-US")} mi · ${ft.toLocaleString("en-US")} ft climbed`);
+  await page.locator("#units").selectOption("metric");
+  await expect(line).toHaveText(`Ridden: 2 routes · ${Math.round(mi * 1.609344).toLocaleString("en-US")} km · ${(Math.round(ft * 0.3048 / 10) * 10).toLocaleString("en-US")} m climbed`);
+  for (const { id } of ids) {
+    await page.goto(`${PAGE}?demo&route=${id}`);
+    await page.locator("#ridden").click();
+    await page.keyboard.press("Escape");
+  }
+  await openList(page);
+  await expect(line).toBeHidden();
+});
+
 test("empty state offers one-step loosening with counts and applies it", async ({ page }) => {
   await page.goto(PAGE);
   await openList(page);
