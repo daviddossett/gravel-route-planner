@@ -4,7 +4,7 @@
 // - Any cross-origin scripts, styles, and fonts: cached copy first, refreshed in the background.
 // - Map tiles: only tiles the rider has already viewed, capped, and kept for the 7 days
 //   OpenTopoMap's cache headers allow. Nothing is prefetched or bulk-downloaded.
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = `atlas-shell-${VERSION}`;
 const ASSETS = `atlas-assets-${VERSION}`;
 const TILES = `atlas-tiles-${VERSION}`;
@@ -14,6 +14,7 @@ const NETWORK_TIMEOUT = 3000;
 const VENDOR = "../../vendor/";
 const PRECACHE = [
   "./", "./index.html", "./offline.js", "../../data/routes.js",
+  "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png", "./apple-touch-icon.png",
   `${VENDOR}leaflet-1.9.4/leaflet.js`, `${VENDOR}leaflet-1.9.4/leaflet.css`,
   ...["sans-condensed-400", "sans-condensed-500", "sans-condensed-600", "sans-condensed-700", "mono-400", "mono-500"]
     .map((f) => `${VENDOR}fonts/ibm-plex/ibm-plex-${f}-latin.woff2`),

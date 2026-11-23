@@ -173,6 +173,22 @@ test("drawer season strip fills one cell per season month and outlines the filte
   await expect(strip.locator("span.sel")).toHaveCount(1);
 });
 
+test("web app manifest and icons are linked and served", async ({ page, request }) => {
+  await page.goto(PAGE);
+  const href = await page.locator('link[rel="manifest"]').getAttribute("href");
+  expect(href).toBe("manifest.webmanifest");
+  const base = new URL(href, page.url());
+  const res = await request.get(base.href);
+  expect(res.ok()).toBe(true);
+  const manifest = JSON.parse(await res.text());
+  expect(manifest.display).toBe("standalone");
+  expect(manifest.name).toBe("Gravel Atlas");
+  expect(manifest.icons.map((i) => i.sizes)).toEqual(expect.arrayContaining(["192x192", "512x512"]));
+  for (const icon of manifest.icons) expect((await request.get(new URL(icon.src, base).href)).ok(), icon.src).toBe(true);
+  const touch = await page.locator('link[rel="apple-touch-icon"]').getAttribute("href");
+  expect((await request.get(new URL(touch, page.url()).href)).ok()).toBe(true);
+});
+
 test("route list still renders offline after the first visit", async ({ page, context }) => {
   const errors = watchErrors(page);
   await page.goto(PAGE);

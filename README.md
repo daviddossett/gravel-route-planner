@@ -22,7 +22,7 @@ You can also open `variants/atlas/index.html` directly (`file://`). Leaflet and 
 
 ### Offline
 
-When served over http(s), a service worker ([`variants/atlas/sw.js`](variants/atlas/sw.js)) saves the page, route data, and the scripts, styles, and fonts it loaded, so a page you opened at home reopens at the trailhead with no signal. It also keeps up to 400 map tiles you've already viewed for 7 days, matching OpenTopoMap's cache headers. Nothing is prefetched. If the map library can't load, [`offline.js`](variants/atlas/offline.js) draws the route outlines as a simple SVG that still highlights the selected route, and a banner on the map says you're offline. There's no service worker on `file://`.
+When served over http(s), a service worker ([`variants/atlas/sw.js`](variants/atlas/sw.js)) saves the page, route data, and the scripts, styles, and fonts it loaded, so a page you opened at home reopens at the trailhead with no signal. It also keeps up to 400 map tiles you've already viewed for 7 days, matching OpenTopoMap's cache headers. Nothing is prefetched. If the map library can't load, [`offline.js`](variants/atlas/offline.js) draws the route outlines as a simple SVG that still highlights the selected route, and a banner on the map says you're offline. There's no service worker on `file://`. A web app manifest ([`manifest.webmanifest`](variants/atlas/manifest.webmanifest)) lets you install Atlas to your home screen (for example Share → Add to Home Screen on iOS, or Install app in Chrome) and launch it full screen with its own icon.
 
 ## Check the route data
 
