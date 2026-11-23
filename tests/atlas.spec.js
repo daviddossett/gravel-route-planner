@@ -150,6 +150,7 @@ test("demo loads with routes, a visible drawer, and Esc closes it", async ({ pag
 });
 
 test("drawer says in plain text whether the route is in season today", async ({ page }) => {
+  await page.clock.setSystemTime(FIXED_DATE);
   await page.goto(`${PAGE}?demo&route=gales-creek`);
   await expect(page.locator("#drawer #season-now")).toHaveText("In season now (through November)");
   await page.goto(`${PAGE}?demo&route=fort-rock`);
