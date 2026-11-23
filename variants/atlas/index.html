@@ -723,7 +723,8 @@ addEventListener("DOMContentLoaded", () => {
   $("#sort").addEventListener("change", (e) => { sortKey = e.target.value; render(); });
   $("#type").addEventListener("change", (e) => { f.type = e.target.value; render(); });
   const REGIONS = [...new Set(ROUTES.map((r) => r.region).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  REGIONS.forEach((name) => $("#region").add(new Option(name, name)));
+  $("#region").options[0].text = `Any (${ROUTES.length})`;
+  REGIONS.forEach((name) => $("#region").add(new Option(`${name} (${ROUTES.filter((r) => r.region === name).length})`, name)));
   $("#region").addEventListener("change", (e) => { f.region = e.target.value; render(); });
   $("#q").addEventListener("input", (e) => { f.q = e.target.value; render(); });
   const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; fitTires = false; saveOrigin(); render(); clearFilters(); fitResults(); };
