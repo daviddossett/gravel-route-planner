@@ -397,6 +397,7 @@
   .season-strip { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2px; max-width: 320px; margin-top: 4px; }
   .season-strip span { box-sizing: border-box; text-align: center; font: 600 10px/16px var(--mono); border: 1px solid var(--line); border-radius: 2px; color: var(--ink-2); }
   .season-strip span.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .season-now { display: block; margin-top: 4px; font-weight: 600; }
   .season-strip span.sel { outline: 2px solid var(--ink-2); outline-offset: 1px; }
   .dir-link { color: var(--forest); text-decoration: underline; white-space: nowrap; display: inline-flex; align-items: center; min-height: 24px; }
   .detail ul { margin: 0; padding-left: 16px; font-size: 13px; line-height: 1.5; }
@@ -557,20 +558,24 @@
         </div>
       </div>
       <div class="row-2">
+        <label class="field"><span class="field-head">Min distance <output id="mind-out"></output></span>
+          <input type="range" id="mind" min="25" max="70" step="5" value="25"></label>
         <label class="field"><span class="field-head">Max distance <output id="dist-out"></output></span>
           <input type="range" id="dist" min="25" max="70" step="5" value="70"></label>
+      </div>
+      <div class="row-2">
         <label class="field"><span class="field-head">Max climbing <output id="gain-out"></output></span>
           <input type="range" id="gain" min="1500" max="6000" step="500" value="6000"></label>
-      </div>
-      <div class="row-2">
         <label class="field"><span class="field-head">Min gravel <output id="grav-out"></output></span>
           <input type="range" id="grav" min="0" max="100" step="10" value="0"></label>
-        <label class="field"><span class="field-head">Drive from <output id="drive-out"></output></span>
-          <input type="range" id="drive" min="1" max="7" step="0.5" value="7"></label>
       </div>
       <div class="row-2">
+        <label class="field"><span class="field-head">Drive from <output id="drive-out"></output></span>
+          <input type="range" id="drive" min="1" max="7" step="0.5" value="7"></label>
         <label class="field"><span class="field-head">Max fun type <output id="fun-out"></output></span>
           <input type="range" id="fun" min="1" max="5" step="1" value="5"></label>
+      </div>
+      <div class="row-2">
         <label class="field"><span class="field-head">Route type</span>
           <select id="type">
             <option value="all">Any</option>
@@ -578,9 +583,9 @@
             <option value="out-and-back">Out-and-back</option>
             <option value="point-to-point">Point-to-point</option>
           </select></label>
+        <label class="field"><span class="field-head">Region</span>
+          <select id="region"><option value="all">Any</option></select></label>
       </div>
-      <label class="field"><span class="field-head">Region</span>
-        <select id="region"><option value="all">Any</option></select></label>
       <div class="seg" role="group" aria-label="Drive time measured from" id="origin">
         <button data-v="sea" aria-pressed="true">Seattle</button>
         <button data-v="pdx" aria-pressed="false">Portland</button>
@@ -634,6 +639,8 @@
       <dl>
         <dt><kbd>/</kbd></dt><dd>Search routes</dd>
         <dt><kbd>J</kbd> / <kbd>K</kbd></dt><dd>Next / previous route</dd>
+        <dt><kbd>S</kbd></dt><dd>Save or unsave the selected route</dd>
+        <dt><kbd>R</kbd></dt><dd>Mark the selected route ridden or not</dd>
         <dt><kbd>Esc</kbd></dt><dd>Clear search, close the drawer or route list</dd>
         <dt><kbd>?</kbd></dt><dd>Show or hide this help</dd>
       </dl>
@@ -660,7 +667,7 @@ addEventListener("DOMContentLoaded", () => {
   // When no route is in season this month (winter), start on Any month instead of an empty list.
   const nothingInSeason = !ROUTES.some((r) => r.months.includes(thisMonth));
   let monthExplicit = false;
-  const defaults = { q: "", month: nothingInSeason ? 0 : thisMonth, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, fun: 5, type: "all", region: "all", origin: "sea", water: false, nopass: false };
+  const defaults = { q: "", month: nothingInSeason ? 0 : thisMonth, state: "all", mind: 25, dist: 70, gain: 6000, grav: 0, drive: 7, fun: 5, type: "all", region: "all", origin: "sea", water: false, nopass: false };
   const ORIGIN_KEY = "atlas.origin";
   // localStorage can throw (private mode, blocked storage); fall back to the default.
   const loadOrigin = () => { try { const v = localStorage.getItem(ORIGIN_KEY); return ["sea", "pdx", "any"].includes(v) ? v : null; } catch { return null; } };
@@ -718,7 +725,13 @@ addEventListener("DOMContentLoaded", () => {
   });
   bindSeg($("#state"), "state"); bindSeg($("#origin"), "origin");
   $("#origin").addEventListener("click", saveOrigin);
-  ["dist", "gain", "grav", "drive", "fun"].forEach((k) => $("#" + k).addEventListener("input", (e) => { f[k] = +e.target.value; render(); }));
+  ["mind", "dist", "gain", "grav", "drive", "fun"].forEach((k) => $("#" + k).addEventListener("input", (e) => {
+    f[k] = +e.target.value;
+    // Min and max can't cross: the slider being dragged pushes the other along.
+    if (k === "mind" && f.mind > f.dist) f.dist = f.mind;
+    if (k === "dist" && f.dist < f.mind) f.mind = f.dist;
+    render();
+  }));
   const SORTS = {
     drive: (a, b) => driveFrom(a).h - driveFrom(b).h,
     miles: (a, b) => a.miles - b.miles || driveFrom(a).h - driveFrom(b).h,
@@ -832,7 +845,7 @@ addEventListener("DOMContentLoaded", () => {
     if (f.region !== "all" && r.region !== f.region) return false;
     if (f.water && r.water === "none") return false;
     if (f.nopass && r.pass) return false;
-    if (r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav || r.difficulty > f.fun) return false;
+    if (r.miles < f.mind || r.miles > f.dist || r.gain > f.gain || r.gravel < f.grav || r.difficulty > f.fun) return false;
     return f.drive >= 7 || driveFrom(r).h <= f.drive; // 7 h = "any"
   }
 
@@ -841,7 +854,7 @@ addEventListener("DOMContentLoaded", () => {
     ["Clear search", () => f.q.trim(), () => { f.q = ""; }],
     ["Any month", () => f.month, () => { f.month = 0; }],
     ["Both states", () => f.state !== "all", () => { f.state = "all"; }],
-    ["Any distance", () => f.dist < 70, () => { f.dist = 70; }],
+    ["Any distance", () => f.dist < 70 || f.mind > 25, () => { f.dist = 70; f.mind = 25; }],
     ["Any climbing", () => f.gain < 6000, () => { f.gain = 6000; }],
     ["Any gravel share", () => f.grav > 0, () => { f.grav = 0; }],
     ["Any fun type", () => f.fun < 5, () => { f.fun = 5; }],
@@ -858,6 +871,7 @@ addEventListener("DOMContentLoaded", () => {
   const CHIPS = [
     () => [`Month: ${f.month ? MONTH_NAMES[f.month - 1].slice(0, 3) : ""}`, f.month && f.month !== defaults.month, () => { f.month = 0; }],
     () => [`State: ${f.state === "OR" ? "Oregon" : "Washington"}`, f.state !== "all", () => { f.state = "all"; }],
+    () => [`Min distance: ${distV(f.mind)} ${distU()}`, f.mind !== defaults.mind, () => { f.mind = defaults.mind; }],
     () => [`Max distance: ${distV(f.dist)} ${distU()}`, f.dist !== defaults.dist, () => { f.dist = defaults.dist; }],
     () => [`Max climbing: ${elevV(f.gain)} ${elevU()}`, f.gain !== defaults.gain, () => { f.gain = defaults.gain; }],
     () => [`Min gravel: ${f.grav}%`, f.grav !== defaults.grav, () => { f.grav = defaults.grav; }],
@@ -921,9 +935,10 @@ addEventListener("DOMContentLoaded", () => {
     $("#month-out").textContent = f.month ? MONTH_NAMES[f.month - 1] : "Any month";
     document.querySelectorAll("#state button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === f.state));
     document.querySelectorAll("#origin button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === f.origin));
-    ["dist", "gain", "grav", "drive", "fun"].forEach((k) => $("#" + k).value = f[k]);
+    ["mind", "dist", "gain", "grav", "drive", "fun"].forEach((k) => $("#" + k).value = f[k]);
     $("#type").value = f.type;
     $("#region").value = f.region;
+    $("#mind-out").textContent = f.mind === defaults.mind ? "Any" : `${distV(f.mind)} ${distU()}`;
     $("#dist-out").textContent = `${distV(f.dist)} ${distU()}`;
     $("#gain-out").textContent = `${elevV(f.gain)} ${elevU()}`;
     $("#grav-out").textContent = `${f.grav}%`;
@@ -1052,7 +1067,7 @@ addEventListener("DOMContentLoaded", () => {
   const appEl = $(".app"), panelToggle = $("#panel-toggle");
   const isPhone = () => matchMedia("(max-width: 760px)").matches;
   function activeFilterCount() {
-    const sliders = ["state", "type", "region", "dist", "gain", "grav", "drive", "fun"].filter((k) => f[k] !== defaults[k]).length;
+    const sliders = ["state", "type", "region", "mind", "dist", "gain", "grav", "drive", "fun"].filter((k) => f[k] !== defaults[k]).length;
     return sliders + (f.month && f.month !== defaults.month ? 1 : 0) + (f.q.trim() ? 1 : 0) +
       [f.water, f.nopass, savedOnly, hideRidden, fitTires].filter(Boolean).length;
   }
@@ -1327,8 +1342,8 @@ addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="actions">
           <button class="btn" id="copy">Copy ride brief</button>
-          <button class="btn ghost" id="save" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save for later"}</button>
-          <button class="btn ghost" id="ridden" type="button" aria-pressed="${ridden.has(r.id)}">${ridden.has(r.id) ? "✓ Ridden" : "Mark as ridden"}</button>
+          <button class="btn ghost" id="save" aria-keyshortcuts="s" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save for later"}</button>
+          <button class="btn ghost" id="ridden" type="button" aria-keyshortcuts="r" aria-pressed="${ridden.has(r.id)}">${ridden.has(r.id) ? "✓ Ridden" : "Mark as ridden"}</button>
           <button class="btn ghost" id="copy-link">Copy link</button>
           ${typeof navigator.share === "function" ? '<button class="btn ghost" id="share" type="button">Share</button>' : ""}
           <button class="btn ghost" id="zoom">Zoom to route</button>
@@ -1349,7 +1364,7 @@ addEventListener("DOMContentLoaded", () => {
           <dt>Surface</dt><dd>${r.surface}</dd>
           <dt>Water</dt><dd>${waterLabel[r.water]}. ${r.waterNote}</dd>
           <dt>Pass</dt><dd>${r.pass || "None needed"}</dd>
-          <dt>Season</dt><dd>${seasonText(r.months)}${seasonStrip(r.months)}</dd>
+          <dt>Season</dt><dd>${seasonText(r.months)}${seasonStrip(r.months)}<span class="season-now" id="season-now">${seasonNow(r.months)}</span></dd>
           <dt>Reward</dt><dd>${r.stop}</dd>
         </dl>
         <div>
@@ -1480,6 +1495,18 @@ addEventListener("DOMContentLoaded", () => {
     const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     return seasonRuns(ms, names, (a, b) => `${a}–${b}`);
   }
+  // Season status for today's month (not the filter month); month lists wrap Dec→Jan.
+  function seasonNow(ms) {
+    const m = new Date().getMonth() + 1, has = (n) => ms.includes(((n - 1) % 12) + 1);
+    if (has(m)) {
+      let end = m;
+      while (end < m + 12 && has(end + 1)) end++;
+      return end >= m + 11 ? "In season now (all year)" : `In season now (through ${MONTH_NAMES[(end - 1) % 12]})`;
+    }
+    let next = m + 1;
+    while (!has(next)) next++;
+    return `Out of season \u2014 next window starts ${MONTH_NAMES[(next - 1) % 12]}`;
+  }
   function seasonStrip(ms) {
     const label = `In season: ${seasonRuns(ms, MONTH_NAMES, (a, b) => `${a} to ${b}`)}`;
     const cells = MONTH_NAMES.map((n, i) => {
@@ -1573,7 +1600,7 @@ addEventListener("DOMContentLoaded", () => {
     const pinned = withRoute && selected;
     if (pinned) p.set("route", selected);
     const q = f.q.trim();
-    const changed = ["state", "type", "region", "dist", "gain", "grav", "drive", "fun"].filter((k) => f[k] !== defaults[k]);
+    const changed = ["state", "type", "region", "mind", "dist", "gain", "grav", "drive", "fun"].filter((k) => f[k] !== defaults[k]);
     // Pin month and origin on any shared state so the link reads the same whatever the viewer's current month or saved origin.
     if (pinned || changed.length || f.month !== defaults.month || f.origin !== defaults.origin) {
       p.set("month", f.month || "any");
@@ -1590,7 +1617,7 @@ addEventListener("DOMContentLoaded", () => {
   }
   // Filters and sort (never the selected route) are remembered between visits; the URL wins when it carries any.
   const FILTERS_KEY = "atlas.filters";
-  const FILTER_PARAMS = ["month", "origin", "state", "type", "region", "dist", "gain", "grav", "drive", "fun", "q", "water", "nopass", "saved", "unridden", "sort"];
+  const FILTER_PARAMS = ["month", "origin", "state", "type", "region", "mind", "dist", "gain", "grav", "drive", "fun", "q", "water", "nopass", "saved", "unridden", "sort"];
   let filtersLive = false; // don't let the initial render (e.g. from a shared link) overwrite the saved setup
   const saveFilters = () => { if (!filtersLive) return; try { const q = stateParams(false).toString(); q ? localStorage.setItem(FILTERS_KEY, q) : localStorage.removeItem(FILTERS_KEY); } catch {} };
   const clearFilters = () => { try { localStorage.removeItem(FILTERS_KEY); } catch {} };
@@ -1628,12 +1655,13 @@ addEventListener("DOMContentLoaded", () => {
     hideRidden = p.get("unridden") === "1";
     const sk = p.get("sort");
     if (sk && Object.hasOwn(SORTS, sk)) { sortKey = sk; $("#sort").value = sk; }
-    ["dist", "gain", "grav", "drive", "fun"].forEach((k) => {
+    ["mind", "dist", "gain", "grav", "drive", "fun"].forEach((k) => {
       const v = p.get(k), el = $("#" + k);
       if (v === null || v.trim() === "" || !isFinite(v)) return;
       const min = +el.min, max = +el.max, step = +el.step;
       f[k] = Math.min(max, Math.max(min, min + Math.round((+v - min) / step) * step));
     });
+    if (f.mind > f.dist) f.mind = f.dist;
     const r = ROUTES.find((x) => x.id === p.get("route"));
     return r ? r.id : null;
   }
@@ -1675,6 +1703,13 @@ addEventListener("DOMContentLoaded", () => {
       if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
       if (selected) stepRoute(e.key === "j" ? 1 : -1);
       else if (e.key === "j") { const first = listOrder()[0]; if (first) select(first.id, true, true); }
+      return;
+    }
+    if ((e.key === "s" || e.key === "r") && !e.ctrlKey && !e.metaKey && !e.altKey && !e.defaultPrevented) {
+      const a = document.activeElement;
+      if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
+      const btn = selected && $(e.key === "s" ? "#save" : "#ridden");
+      if (btn) { e.preventDefault(); btn.click(); }
       return;
     }
     if (e.key !== "Escape") return;
