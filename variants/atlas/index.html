@@ -403,7 +403,8 @@
   .start-pin.saved { background: var(--forest); border-color: var(--forest); }
   .start-pin.ridden { background: var(--line); border-color: var(--ink-2); opacity: .8; }
   .start-pin.ridden.saved { background: var(--forest); border-color: var(--ink-2); opacity: 1; }
-  .start-pin.on { border-color: var(--rust); animation: hop .7s cubic-bezier(.3, 1.6, .5, 1); }
+  .start-pin.on, .start-pin.on.ridden.saved { border-color: var(--rust); }
+  .start-pin.on { animation: hop .7s cubic-bezier(.3, 1.6, .5, 1); }
   @keyframes hop { 0% { transform: translateY(0); } 40% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
   .ants { animation: march 1s linear infinite; }
   @keyframes march { to { stroke-dashoffset: -12; } }
@@ -688,7 +689,7 @@ addEventListener("DOMContentLoaded", () => {
   REGIONS.forEach((name) => $("#region").add(new Option(name, name)));
   $("#region").addEventListener("change", (e) => { f.region = e.target.value; render(); });
   $("#q").addEventListener("input", (e) => { f.q = e.target.value; render(); });
-  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; fitTires = false; saveOrigin(); render(); fitResults(); };
+  const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; fitTires = false; saveOrigin(); render(); clearFilters(); fitResults(); };
   $("#badges-toggle").addEventListener("click", (e) => {
     const open = e.currentTarget.getAttribute("aria-expanded") !== "true";
     e.currentTarget.setAttribute("aria-expanded", open);
@@ -911,6 +912,7 @@ addEventListener("DOMContentLoaded", () => {
       styleLines();
     }
     if (selected && !shown.find((r) => r.id === selected)) closeDrawer();
+    saveFilters();
     syncUrl();
   }
 
@@ -1418,13 +1420,14 @@ addEventListener("DOMContentLoaded", () => {
   }
 
   // Shareable links: the URL mirrors the selected route and any non-default filters.
-  function stateParams() {
+  function stateParams(withRoute = true) {
     const p = new URLSearchParams();
-    if (selected) p.set("route", selected);
+    const pinned = withRoute && selected;
+    if (pinned) p.set("route", selected);
     const q = f.q.trim();
     const changed = ["state", "type", "region", "dist", "gain", "grav", "drive", "fun"].filter((k) => f[k] !== defaults[k]);
     // Pin month and origin on any shared state so the link reads the same whatever the viewer's current month or saved origin.
-    if (selected || changed.length || f.month !== defaults.month || f.origin !== defaults.origin) {
+    if (pinned || changed.length || f.month !== defaults.month || f.origin !== defaults.origin) {
       p.set("month", f.month || "any");
       p.set("origin", f.origin);
     }
@@ -1437,6 +1440,13 @@ addEventListener("DOMContentLoaded", () => {
     if (sortKey !== "drive") p.set("sort", sortKey);
     return p;
   }
+  // Filters and sort (never the selected route) are remembered between visits; the URL wins when it carries any.
+  const FILTERS_KEY = "atlas.filters";
+  const FILTER_PARAMS = ["month", "origin", "state", "type", "region", "dist", "gain", "grav", "drive", "fun", "q", "water", "nopass", "saved", "unridden", "sort"];
+  let filtersLive = false; // don't let the initial render (e.g. from a shared link) overwrite the saved setup
+  const saveFilters = () => { if (!filtersLive) return; try { const q = stateParams(false).toString(); q ? localStorage.setItem(FILTERS_KEY, q) : localStorage.removeItem(FILTERS_KEY); } catch {} };
+  const clearFilters = () => { try { localStorage.removeItem(FILTERS_KEY); } catch {} };
+  const loadFilters = () => { try { return new URLSearchParams(localStorage.getItem(FILTERS_KEY) || ""); } catch { return new URLSearchParams(); } };
   function shareUrl() {
     const q = stateParams().toString();
     return location.href.split(/[?#]/)[0] + (q ? `?${q}` : "");
@@ -1451,6 +1461,7 @@ addEventListener("DOMContentLoaded", () => {
   }
   function readUrl() {
     const p = new URLSearchParams(location.search);
+    if (!FILTER_PARAMS.some((k) => p.has(k))) loadFilters().forEach((v, k) => p.set(k, v));
     const segValues = (id) => [...document.querySelectorAll(`#${id} button`)].map((b) => b.dataset.v);
     const m = p.get("month");
     if (m === "any") f.month = 0;
@@ -1514,6 +1525,7 @@ addEventListener("DOMContentLoaded", () => {
     }
     select(linked, true);
   }
+  filtersLive = true;
   const first = ROUTES.filter(matches)[0];
   if (!linked && new URLSearchParams(location.search).has("demo") && first) select(first.id, true);
 });
