@@ -427,7 +427,10 @@
   .leaflet-container .leaflet-control-attribution { background: color-mix(in srgb, var(--paper) 85%, transparent); color: var(--ink-2); }
   .leaflet-container .leaflet-control-attribution a { color: var(--forest); text-decoration: underline; }
 
+  .leaflet-control-scale-line { background: color-mix(in srgb, var(--paper) 85%, transparent); color: var(--ink); border-color: var(--ink-2); font-weight: 600; }
   @media (max-width: 1100px) {
+    /* The bottom drawer would sit under the scale bar, so hide it while a route is open. */
+    .stage:has(.drawer.open) .leaflet-control-scale { display: none; }
     .drawer { grid-template-columns: 1fr; max-height: 70%; overflow-y: auto; }
     .drawer .info { border-right: 0; border-bottom: 1px solid var(--line); }
   }
@@ -796,13 +799,21 @@ addEventListener("DOMContentLoaded", () => {
     units = unitsEl.value === "metric" ? "metric" : "imperial";
     try { localStorage.setItem(UNITS_KEY, units); } catch {}
     render(); refreshDrawerUnits();
+    setScale();
   });
 
   // Map
-  let map = null; const layers = {};
+  let map = null, scaleControl = null; const layers = {};
+  // Leaflet builds its scale lines once, so swap the control when Units changes.
+  function setScale() {
+    if (!map) return;
+    if (scaleControl) scaleControl.remove();
+    scaleControl = L.control.scale({ position: "bottomleft", imperial: !metric(), metric: metric() }).addTo(map);
+  }
   if (window.L) {
     map = L.map("map", { zoomControl: false, attributionControl: true }).setView([45.6, -121.4], 7);
     L.control.zoom({ position: "topright" }).addTo(map);
+    setScale();
     L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
       maxZoom: 15, subdomains: "abc", crossOrigin: true,
       attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, SRTM · Style © <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'

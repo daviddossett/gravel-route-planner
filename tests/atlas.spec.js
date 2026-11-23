@@ -556,6 +556,18 @@ test("units toggle shows km and m in filters, list and drawer, and leaves the UR
   await expect(page.locator("#dist-out")).toContainText("km");
 });
 
+test("map scale bar follows the Units setting", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  const scale = page.locator(".leaflet-control-scale-line");
+  await expect(scale).toHaveCount(1);
+  await expect(scale.first()).toHaveText(/\d+ (mi|ft)$/);
+  await openList(page);
+  await page.locator("#units").selectOption("metric");
+  await expect(scale.first()).toHaveText(/\d+ (km|m)$/);
+  await page.locator("#units").selectOption("imperial");
+  await expect(scale.first()).toHaveText(/\d+ (mi|ft)$/);
+});
+
 test("drive origin changes the listed drive times and is remembered", async ({ page }) => {
   await page.goto(`${PAGE}?month=any`);
   await openList(page);
