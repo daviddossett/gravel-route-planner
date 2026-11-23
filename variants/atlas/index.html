@@ -836,6 +836,7 @@ addEventListener("DOMContentLoaded", () => {
     tt.setAttribute("aria-pressed", fitTires);
     $("#water-toggle").setAttribute("aria-pressed", f.water);
     $("#nopass-toggle").setAttribute("aria-pressed", f.nopass);
+    updateToggleLabel();
     const shown = ROUTES.filter(matches).sort(SORTS[sortKey]);
     updateRouteNav();
     $("#count").textContent = `${shown.length} of ${ROUTES.length} routes`;
@@ -920,10 +921,19 @@ addEventListener("DOMContentLoaded", () => {
 
   const appEl = $(".app"), panelToggle = $("#panel-toggle");
   const isPhone = () => matchMedia("(max-width: 760px)").matches;
+  function activeFilterCount() {
+    const sliders = ["state", "type", "region", "dist", "gain", "grav", "drive", "fun"].filter((k) => f[k] !== defaults[k]).length;
+    return sliders + (f.month && f.month !== defaults.month ? 1 : 0) + (f.q.trim() ? 1 : 0) +
+      [f.water, f.nopass, savedOnly, hideRidden, fitTires].filter(Boolean).length;
+  }
+  function updateToggleLabel() {
+    const n = activeFilterCount();
+    $("#panel-toggle-label").textContent = $(".app").classList.contains("panel-open") ? "Show map" : n ? `Routes · ${n} ${n === 1 ? "filter" : "filters"}` : "Routes";
+  }
   function setPanel(open) {
     appEl.classList.toggle("panel-open", open);
     panelToggle.setAttribute("aria-expanded", open);
-    $("#panel-toggle-label").textContent = open ? "Show map" : "Routes";
+    updateToggleLabel();
     // Keep keyboard and screen reader focus inside the list while it covers the map.
     $(".stage").inert = open;
   }
