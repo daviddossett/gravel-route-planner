@@ -823,6 +823,37 @@ test("distance and climbing sliders narrow the list, update the count and land i
   await expect.poll(() => new URL(page.url()).searchParams.has("dist")).toBe(false);
 });
 
+test("Min distance hides short routes, can't cross Max, and shows in chip, URL and reset", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeVisible();
+  const total = await rows.count();
+
+  await page.locator("#mind").fill("50");
+  await expect(page.locator("#mind-out")).toContainText("50 mi");
+  await expect.poll(() => rows.count()).toBeLessThan(total);
+  await expect.poll(() => new URL(page.url()).searchParams.get("mind")).toBe("50");
+  const chips = page.locator("#chips");
+  await expect(chips).toContainText("Min distance: 50 mi");
+  await page.locator("#units").selectOption("metric");
+  await expect(chips).toContainText("Min distance: 80 km");
+  await page.locator("#units").selectOption("imperial");
+
+  await page.locator("#dist").fill("30");
+  expect(await page.locator("#mind").inputValue()).toBe("30");
+  await page.locator("#mind").fill("60");
+  expect(await page.locator("#dist").inputValue()).toBe("60");
+
+  await chips.getByRole("button", { name: "Remove filter: Min distance 60 mi" }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.has("mind")).toBe(false);
+
+  await page.locator("#mind").fill("50");
+  await page.getByRole("button", { name: /reset filters/i }).first().click();
+  expect(await page.locator("#mind").inputValue()).toBe("25");
+  await expect.poll(() => rows.count()).toBe(total);
+});
+
 test("Copy coordinates puts the trailhead lat, lon on the clipboard", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto(`${PAGE}?route=gales-creek`);
