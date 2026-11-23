@@ -1125,6 +1125,40 @@ test("drawer Prev/Next step through the filtered list, wrap, and update the URL"
   await expect.poll(routeParam).toBe(ids[ids.length - 1]);
 });
 
+test("j / k step through routes like Next / Prev and are ignored while typing", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  const ids = await page.locator("#list .route").evaluateAll((els) => els.map((e) => e.dataset.id));
+  expect(ids.length).toBeGreaterThan(2);
+  const routeParam = () => new URL(page.url()).searchParams.get("route");
+  await page.locator(`#list .route[data-id="${ids[0]}"]`).evaluate((el) => el.click());
+  await expect.poll(routeParam).toBe(ids[0]);
+
+  await page.keyboard.press("j");
+  await expect.poll(routeParam).toBe(ids[1]);
+  await page.keyboard.press("k");
+  await expect.poll(routeParam).toBe(ids[0]);
+  await expect(page.locator("#route-next")).toHaveAttribute("aria-keyshortcuts", "j");
+  await expect(page.locator("#route-prev")).toHaveAttribute("aria-keyshortcuts", "k");
+
+  await openList(page);
+  await page.locator("#q").focus();
+  await page.keyboard.type("jkjk");
+  await expect(page.locator("#q")).toHaveValue("jkjk");
+  expect([ids[1], ids[ids.length - 1]]).not.toContain(routeParam());
+});
+
+test("j selects the first route when nothing is selected and k does nothing", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#drawer")).not.toHaveClass(/\bopen\b/);
+  const routeParam = () => new URL(page.url()).searchParams.get("route");
+  await page.keyboard.press("k");
+  await expect.poll(routeParam).toBe(null);
+  const first = await page.locator("#list .route").first().getAttribute("data-id");
+  await page.keyboard.press("j");
+  await expect.poll(routeParam).toBe(first);
+});
+
 test("Pressing / focuses the search box without typing it, and is ignored inside text fields", async ({ page }) => {
   await page.goto(`${PAGE}?demo`);
   await expect(page.locator("#list .route").first()).toBeAttached();

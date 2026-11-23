@@ -40,6 +40,8 @@ Each route's `type` is `loop`, `out-and-back`, or `point-to-point`. Draw out-and
 
 Press `/` anywhere (outside a text field) to jump to the route search box; `Esc` closes the details drawer or the route list.
 
+Press `j` / `k` (outside a text field) to select the next / previous route in the list, like the drawer's Next / Prev buttons. With nothing selected, `j` selects the first matching route.
+
 ## Tests
 
 The site has no dependencies. Playwright is a dev-only dependency for browser smoke tests:
