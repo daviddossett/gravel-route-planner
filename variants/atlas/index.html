@@ -428,6 +428,10 @@
   .leaflet-container .leaflet-control-attribution a { color: var(--forest); text-decoration: underline; }
 
   .leaflet-control-scale-line { background: color-mix(in srgb, var(--paper) 85%, transparent); color: var(--ink); border-color: var(--ink-2); font-weight: 600; }
+  /* The attribution wraps to two lines on narrow screens; lift the scale above it. */
+  @media (max-width: 600px) {
+    .leaflet-bottom.leaflet-left .leaflet-control-scale { margin-bottom: 40px; }
+  }
   @media (max-width: 1100px) {
     /* The bottom drawer would sit under the scale bar, so hide it while a route is open. */
     .stage:has(.drawer.open) .leaflet-control-scale { display: none; }

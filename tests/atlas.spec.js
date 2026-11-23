@@ -566,6 +566,11 @@ test("map scale bar follows the Units setting", async ({ page }) => {
   await expect(scale.first()).toHaveText(/\d+ (km|m)$/);
   await page.locator("#units").selectOption("imperial");
   await expect(scale.first()).toHaveText(/\d+ (mi|ft)$/);
+
+  const a = await scale.first().boundingBox();
+  const b = await page.locator(".leaflet-control-attribution").boundingBox();
+  const apart = a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+  expect(apart).toBe(true);
 });
 
 test("drive origin changes the listed drive times and is remembered", async ({ page }) => {
