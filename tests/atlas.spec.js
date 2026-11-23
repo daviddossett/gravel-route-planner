@@ -1444,3 +1444,21 @@ test("the Keyboard shortcuts header button is fully visible inside the viewport"
   await btn.click();
   await expect(page.locator("#help")).toBeVisible();
 });
+
+for (const [label, size] of [["desktop", { width: 1280, height: 800 }], ["mobile", { width: 390, height: 844 }]]) {
+  test(`route rows show a season line (${label})`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await page.goto(`${PAGE}?demo&month=any`);
+    if (label === "mobile") await page.locator("#panel-toggle").click();
+    const expected = await page.evaluate(() => {
+      const r = window.PNW_ROUTES[0];
+      const n = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      return { id: r.id, text: `Season: ${n[r.months[0] - 1]}–${n[r.months[r.months.length - 1] - 1]}` };
+    });
+    const row = page.locator(`.route[data-id="${expected.id}"]`);
+    await expect(row.locator(".season")).toHaveText(expected.text);
+    await expect(page.locator(".route[role='option']").first()).toBeVisible();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth);
+    expect(overflow).toBe(false);
+  });
+}
