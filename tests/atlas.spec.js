@@ -1719,6 +1719,24 @@ test("Copy saved list copies a shortlist of saved routes with links", async ({ p
   expect(errors).toEqual([]);
 });
 
+test("long toasts stay up longer than short ones", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-01-15T12:00:00"));
+  await page.goto(`${PAGE}?demo`);
+  const toast = page.locator("#toast");
+  await expect(toast).toContainText("Nothing is in season in January");
+  await page.waitForTimeout(2500);
+  await expect(toast).toHaveClass(/show/);
+  await expect(toast).toHaveAttribute("role", "status");
+
+  await page.goto(`${PAGE}?route=klickitat&month=any&state=WA`);
+  await page.locator("#save").click();
+  await page.locator("#save").click();
+  await expect(toast).toHaveText("Removed from saved.");
+  await expect(toast).toHaveClass(/show/);
+  await page.waitForTimeout(2500);
+  await expect(toast).not.toHaveClass(/show/);
+});
+
 test("in a month with no routes the month filter falls back to Any month, unless set explicitly", async ({ page }) => {
   const errors = watchErrors(page);
   await page.clock.setFixedTime(new Date("2026-01-15T12:00:00"));

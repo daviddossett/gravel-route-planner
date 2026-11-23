@@ -1722,7 +1722,7 @@ addEventListener("DOMContentLoaded", () => {
     const r = ROUTES.find((x) => x.id === p.get("route"));
     return r ? r.id : null;
   }
-  let tt; function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
+  let tt; function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), Math.min(8000, Math.max(1800, msg.length * 60))); }
   const helpEl = $("#help");
   let helpReturn = null;
   function setHelp(open) {
