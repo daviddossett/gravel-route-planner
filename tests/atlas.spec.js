@@ -1693,3 +1693,42 @@ test("in a month with no routes the month filter falls back to Any month, unless
   await expect(page.locator("#toast")).not.toHaveClass(/show/);
   expect(errors).toEqual([]);
 });
+
+test("Back closes the route drawer, Forward reopens it, and Esc doesn't leave a dead end", async ({ page }) => {
+  await page.goto(`${PAGE}?demo&sort=miles`);
+  const drawer = page.locator("#drawer");
+  await expect(drawer).toHaveClass(/\bopen\b/);
+  const id = new URL(page.url()).searchParams.get("route");
+
+  await page.goBack();
+  await expect(page).toHaveURL(new RegExp(`${PAGE}\\?`));
+  await expect(drawer).not.toHaveClass(/\bopen\b/);
+  expect(new URL(page.url()).searchParams.has("route")).toBe(false);
+  expect(new URL(page.url()).searchParams.get("sort")).toBe("miles");
+  expect(page.url()).toContain("demo");
+
+  await page.goForward();
+  await expect(drawer).toHaveClass(/\bopen\b/);
+  expect(new URL(page.url()).searchParams.get("route")).toBe(id);
+
+  // Switching routes replaces the entry, so one Back still closes the drawer.
+  await openList(page);
+  await page.locator("#list .route").nth(1).click();
+  await expect(drawer).toHaveClass(/\bopen\b/);
+  await page.goBack();
+  await expect(drawer).not.toHaveClass(/\bopen\b/);
+
+  // Esc after opening goes back through history rather than stacking entries.
+  await page.goForward();
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toHaveClass(/\bopen\b/);
+  await expect(page).toHaveURL(new RegExp(`${PAGE}\\?(?!.*route=)`));
+});
+
+test("a shared ?route= link adds no history entry", async ({ page }) => {
+  await page.goto("about:blank");
+  await page.goto(`${PAGE}?demo&route=gales-creek`);
+  await expect(page.locator("#drawer")).toHaveClass(/\bopen\b/);
+  await page.goBack();
+  await expect(page).toHaveURL("about:blank");
+});
