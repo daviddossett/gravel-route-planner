@@ -397,6 +397,7 @@
   .season-strip { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2px; max-width: 320px; margin-top: 4px; }
   .season-strip span { box-sizing: border-box; text-align: center; font: 600 10px/16px var(--mono); border: 1px solid var(--line); border-radius: 2px; color: var(--ink-2); }
   .season-strip span.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .season-now { display: block; margin-top: 4px; font-weight: 600; }
   .season-strip span.sel { outline: 2px solid var(--ink-2); outline-offset: 1px; }
   .dir-link { color: var(--forest); text-decoration: underline; white-space: nowrap; display: inline-flex; align-items: center; min-height: 24px; }
   .detail ul { margin: 0; padding-left: 16px; font-size: 13px; line-height: 1.5; }
@@ -638,6 +639,8 @@
       <dl>
         <dt><kbd>/</kbd></dt><dd>Search routes</dd>
         <dt><kbd>J</kbd> / <kbd>K</kbd></dt><dd>Next / previous route</dd>
+        <dt><kbd>S</kbd></dt><dd>Save or unsave the selected route</dd>
+        <dt><kbd>R</kbd></dt><dd>Mark the selected route ridden or not</dd>
         <dt><kbd>Esc</kbd></dt><dd>Clear search, close the drawer or route list</dd>
         <dt><kbd>?</kbd></dt><dd>Show or hide this help</dd>
       </dl>
@@ -1335,8 +1338,8 @@ addEventListener("DOMContentLoaded", () => {
         </div>
         <div class="actions">
           <button class="btn" id="copy">Copy ride brief</button>
-          <button class="btn ghost" id="save" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save for later"}</button>
-          <button class="btn ghost" id="ridden" type="button" aria-pressed="${ridden.has(r.id)}">${ridden.has(r.id) ? "✓ Ridden" : "Mark as ridden"}</button>
+          <button class="btn ghost" id="save" aria-keyshortcuts="s" aria-pressed="${saved.has(r.id)}">${saved.has(r.id) ? "★ Saved" : "☆ Save for later"}</button>
+          <button class="btn ghost" id="ridden" type="button" aria-keyshortcuts="r" aria-pressed="${ridden.has(r.id)}">${ridden.has(r.id) ? "✓ Ridden" : "Mark as ridden"}</button>
           <button class="btn ghost" id="copy-link">Copy link</button>
           ${typeof navigator.share === "function" ? '<button class="btn ghost" id="share" type="button">Share</button>' : ""}
           <button class="btn ghost" id="zoom">Zoom to route</button>
@@ -1357,7 +1360,7 @@ addEventListener("DOMContentLoaded", () => {
           <dt>Surface</dt><dd>${r.surface}</dd>
           <dt>Water</dt><dd>${waterLabel[r.water]}. ${r.waterNote}</dd>
           <dt>Pass</dt><dd>${r.pass || "None needed"}</dd>
-          <dt>Season</dt><dd>${seasonText(r.months)}${seasonStrip(r.months)}</dd>
+          <dt>Season</dt><dd>${seasonText(r.months)}${seasonStrip(r.months)}<span class="season-now" id="season-now">${seasonNow(r.months)}</span></dd>
           <dt>Reward</dt><dd>${r.stop}</dd>
         </dl>
         <div>
@@ -1487,6 +1490,18 @@ addEventListener("DOMContentLoaded", () => {
   function seasonText(ms) {
     const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     return seasonRuns(ms, names, (a, b) => `${a}–${b}`);
+  }
+  // Season status for today's month (not the filter month); month lists wrap Dec→Jan.
+  function seasonNow(ms) {
+    const m = new Date().getMonth() + 1, has = (n) => ms.includes(((n - 1) % 12) + 1);
+    if (has(m)) {
+      let end = m;
+      while (end < m + 12 && has(end + 1)) end++;
+      return end >= m + 11 ? "In season now (all year)" : `In season now (through ${MONTH_NAMES[(end - 1) % 12]})`;
+    }
+    let next = m + 1;
+    while (!has(next)) next++;
+    return `Out of season \u2014 next window starts ${MONTH_NAMES[(next - 1) % 12]}`;
   }
   function seasonStrip(ms) {
     const label = `In season: ${seasonRuns(ms, MONTH_NAMES, (a, b) => `${a} to ${b}`)}`;
@@ -1684,6 +1699,13 @@ addEventListener("DOMContentLoaded", () => {
       if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
       if (selected) stepRoute(e.key === "j" ? 1 : -1);
       else if (e.key === "j") { const first = listOrder()[0]; if (first) select(first.id, true, true); }
+      return;
+    }
+    if ((e.key === "s" || e.key === "r") && !e.ctrlKey && !e.metaKey && !e.altKey && !e.defaultPrevented) {
+      const a = document.activeElement;
+      if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
+      const btn = selected && $(e.key === "s" ? "#save" : "#ridden");
+      if (btn) { e.preventDefault(); btn.click(); }
       return;
     }
     if (e.key !== "Escape") return;

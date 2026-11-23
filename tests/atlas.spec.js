@@ -149,6 +149,17 @@ test("demo loads with routes, a visible drawer, and Esc closes it", async ({ pag
   expect(errors, "page and console errors").toEqual([]);
 });
 
+test("drawer says in plain text whether the route is in season today", async ({ page }) => {
+  await page.clock.setSystemTime(FIXED_DATE);
+  await page.goto(`${PAGE}?demo&route=gales-creek`);
+  await expect(page.locator("#drawer #season-now")).toHaveText("In season now (through November)");
+  await page.goto(`${PAGE}?demo&route=fort-rock`);
+  await expect(page.locator("#drawer #season-now")).toHaveText("Out of season \u2014 next window starts September");
+  await page.clock.setSystemTime(new Date("2026-12-15T12:00:00"));
+  await page.goto(`${PAGE}?demo&route=gales-creek`);
+  await expect(page.locator("#drawer #season-now")).toHaveText("Out of season \u2014 next window starts April");
+});
+
 test("drawer season strip fills one cell per season month and outlines the filter month", async ({ page }) => {
   await page.goto(`${PAGE}?demo&month=7`);
   const strip = page.locator("#drawer .season-strip");
@@ -1301,6 +1312,43 @@ test("j / k step through routes like Next / Prev and are ignored while typing", 
   await page.keyboard.type("jkjk");
   await expect(page.locator("#q")).toHaveValue("jkjk");
   expect([ids[1], ids[ids.length - 1]]).not.toContain(routeParam());
+});
+
+test("s saves and r marks ridden for the selected route, and are ignored while typing or with modifiers", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  const id = await page.locator("#list .route").first().evaluate((el) => el.dataset.id);
+  await page.locator(`#list .route[data-id="${id}"]`).evaluate((el) => el.click());
+  const save = page.locator("#save");
+  const ridden = page.locator("#ridden");
+  await expect(save).toHaveAttribute("aria-keyshortcuts", "s");
+  await expect(ridden).toHaveAttribute("aria-keyshortcuts", "r");
+  await expect(save).toHaveAttribute("aria-pressed", "false");
+
+  await page.keyboard.press("s");
+  await expect(save).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("r");
+  await expect(ridden).toHaveAttribute("aria-pressed", "true");
+  await page.reload();
+  await expect(page.locator("#save")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#ridden")).toHaveAttribute("aria-pressed", "true");
+
+  await page.keyboard.press("Control+s");
+  await expect(page.locator("#save")).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("s");
+  await expect(page.locator("#save")).toHaveAttribute("aria-pressed", "false");
+
+  await openList(page);
+  await page.locator("#q").focus();
+  await page.keyboard.type("sr");
+  await expect(page.locator("#q")).toHaveValue("sr");
+  await expect(page.locator("#ridden")).toHaveAttribute("aria-pressed", "true");
+
+  await page.evaluate(() => document.activeElement.blur());
+  await page.keyboard.press("?");
+  await expect(page.locator("#help")).toContainText("Save or unsave");
+  await page.keyboard.press("r");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#ridden")).toHaveAttribute("aria-pressed", "true");
 });
 
 test("j selects the first route when nothing is selected and k does nothing", async ({ page }) => {
