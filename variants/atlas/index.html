@@ -656,7 +656,11 @@ addEventListener("DOMContentLoaded", () => {
   const MONTHS = ["J","F","M","A","M","J","J","A","S","O","N","D"];
   const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const $ = (s) => document.querySelector(s);
-  const defaults = { q: "", month: new Date().getMonth() + 1, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, fun: 5, type: "all", region: "all", origin: "sea", water: false, nopass: false };
+  const thisMonth = new Date().getMonth() + 1;
+  // When no route is in season this month (winter), start on Any month instead of an empty list.
+  const nothingInSeason = !ROUTES.some((r) => r.months.includes(thisMonth));
+  let monthExplicit = false;
+  const defaults = { q: "", month: nothingInSeason ? 0 : thisMonth, state: "all", dist: 70, gain: 6000, grav: 0, drive: 7, fun: 5, type: "all", region: "all", origin: "sea", water: false, nopass: false };
   const ORIGIN_KEY = "atlas.origin";
   // localStorage can throw (private mode, blocked storage); fall back to the default.
   const loadOrigin = () => { try { const v = localStorage.getItem(ORIGIN_KEY); return ["sea", "pdx", "any"].includes(v) ? v : null; } catch { return null; } };
@@ -1608,8 +1612,8 @@ addEventListener("DOMContentLoaded", () => {
     if (!FILTER_PARAMS.some((k) => p.has(k))) loadFilters().forEach((v, k) => p.set(k, v));
     const segValues = (id) => [...document.querySelectorAll(`#${id} button`)].map((b) => b.dataset.v);
     const m = p.get("month");
-    if (m === "any") f.month = 0;
-    else if (/^\d{1,2}$/.test(m) && +m >= 1 && +m <= 12) f.month = +m;
+    if (m === "any") { f.month = 0; monthExplicit = true; }
+    else if (/^\d{1,2}$/.test(m) && +m >= 1 && +m <= 12) { f.month = +m; monthExplicit = true; }
     if (segValues("state").includes(p.get("state"))) f.state = p.get("state");
     const t = p.get("type");
     if (t && Object.hasOwn(TYPE, t)) f.type = t;
@@ -1710,6 +1714,7 @@ addEventListener("DOMContentLoaded", () => {
     select(linked, true);
   }
   filtersLive = true;
+  if (nothingInSeason && !monthExplicit) toast(`Nothing is in season in ${MONTH_NAMES[thisMonth - 1]}, so showing all months.`);
   const first = ROUTES.filter(matches)[0];
   if (!linked && new URLSearchParams(location.search).has("demo") && first) select(first.id, true);
 });

@@ -1556,3 +1556,24 @@ test("Copy saved list copies a shortlist of saved routes with links", async ({ p
   expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/ km, [\d,]+ m, /);
   expect(errors).toEqual([]);
 });
+
+test("in a month with no routes the month filter falls back to Any month, unless set explicitly", async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.clock.setFixedTime(new Date("2026-01-15T12:00:00"));
+  await page.goto(`${PAGE}?demo`);
+  await openList(page);
+  await expect(page.locator("#month-out")).toHaveText("Any month");
+  await expect(page.locator("#list .route").first()).toBeAttached();
+  await expect(page.locator("#toast")).toContainText("Nothing is in season in January, so showing all months.");
+
+  await page.goto(`${PAGE}?demo&month=1`);
+  await openList(page);
+  await expect(page.locator("#month-out")).toHaveText("January");
+  await expect(page.locator("#empty")).toBeVisible();
+  await expect(page.locator("#toast")).not.toHaveClass(/show/);
+
+  await page.goto(`${PAGE}?demo&month=any`);
+  await expect(page.locator("#month-out")).toHaveText("Any month");
+  await expect(page.locator("#toast")).not.toHaveClass(/show/);
+  expect(errors).toEqual([]);
+});
