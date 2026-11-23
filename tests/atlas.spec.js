@@ -1446,3 +1446,34 @@ for (const [label, size] of [["desktop", { width: 1280, height: 800 }], ["mobile
     expect(overflow).toBe(false);
   });
 }
+
+test("Copy saved list copies a shortlist of saved routes with links", async ({ page, context }) => {
+  const errors = watchErrors(page);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#copy-saved")).toBeHidden();
+  const names = [];
+  for (const i of [0, 1]) {
+    await openList(page);
+    await page.locator("#list .route").nth(i).click();
+    names.push(await page.locator("#list .route").nth(i).locator("h2").innerText());
+    await page.locator("#save").click();
+    await page.keyboard.press("Escape");
+  }
+  await openList(page);
+  const btn = page.locator("#copy-saved");
+  await expect(btn).toBeVisible();
+  await expect(btn).toHaveAccessibleName("Copy saved list");
+  await btn.click();
+  await expect(page.locator("#toast")).toContainText("Copied 2 saved routes");
+  const text = await page.evaluate(() => navigator.clipboard.readText());
+  const lines = text.split("\n");
+  expect(lines[0]).toBe("My Gravel Atlas shortlist (2 routes)");
+  expect(lines).toHaveLength(3);
+  for (const n of names) expect(text).toContain(n);
+  expect(lines[1]).toMatch(/ — [\d,.]+ mi, [\d,]+ ft, \d+% gravel — .*\?route=/);
+  await page.locator("#units").selectOption("metric");
+  await btn.click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/ km, [\d,]+ m, /);
+  expect(errors).toEqual([]);
+});

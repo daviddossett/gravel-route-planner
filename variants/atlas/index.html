@@ -586,6 +586,7 @@
 
     <div class="list-head"><span id="count" aria-live="polite"></span>
       <button type="button" class="saved-toggle" id="saved-toggle" aria-pressed="false" hidden></button>
+      <button type="button" class="saved-toggle" id="copy-saved" hidden>Copy saved list</button>
       <button type="button" class="saved-toggle" id="ridden-toggle" aria-pressed="false" hidden></button>
       <button type="button" class="saved-toggle" id="tire-toggle" aria-pressed="false" hidden>Fits my tires</button>
       <button type="button" class="saved-toggle" id="water-toggle" aria-pressed="false">Has water on route</button>
@@ -734,6 +735,14 @@ addEventListener("DOMContentLoaded", () => {
     $("#badges-list").hidden = !open;
   });
   $("#saved-toggle").addEventListener("click", () => { savedOnly = !savedOnly; render(); });
+  $("#copy-saved").addEventListener("click", () => {
+    const rows = ROUTES.filter((r) => saved.has(r.id)).sort(SORTS[sortKey]);
+    if (!rows.length) return;
+    const base = location.href.split(/[?#]/)[0];
+    const n = rows.length, noun = n === 1 ? "route" : "routes";
+    const lines = rows.map((r) => `${r.name} — ${distV(r.miles)} ${distU()}, ${elevV(r.gain)} ${elevU()}, ${r.gravel}% gravel — ${base}?route=${encodeURIComponent(r.id)}`);
+    copyText([`My Gravel Atlas shortlist (${n} ${noun})`, ...lines].join("\n"), `Copied ${n} saved ${noun}`);
+  });
   $("#ridden-toggle").addEventListener("click", () => { hideRidden = !hideRidden; render(); });
   $("#tire-toggle").addEventListener("click", () => { fitTires = !fitTires; render(); });
   $("#water-toggle").addEventListener("click", () => { f.water = !f.water; render(); });
@@ -877,6 +886,7 @@ addEventListener("DOMContentLoaded", () => {
     toggle.hidden = !known;
     toggle.textContent = `Saved (${known})`;
     toggle.setAttribute("aria-pressed", savedOnly);
+    $("#copy-saved").hidden = !known;
     const riddenKnown = ROUTES.filter((r) => ridden.has(r.id)).length;
     if (!riddenKnown) hideRidden = false;
     const rt = $("#ridden-toggle");
