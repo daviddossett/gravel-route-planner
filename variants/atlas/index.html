@@ -397,6 +397,7 @@
   .season-strip { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 2px; max-width: 320px; margin-top: 4px; }
   .season-strip span { box-sizing: border-box; text-align: center; font: 600 10px/16px var(--mono); border: 1px solid var(--line); border-radius: 2px; color: var(--ink-2); }
   .season-strip span.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+  .season-now { display: block; margin-top: 4px; font-weight: 600; }
   .season-strip span.sel { outline: 2px solid var(--ink-2); outline-offset: 1px; }
   .dir-link { color: var(--forest); text-decoration: underline; white-space: nowrap; display: inline-flex; align-items: center; min-height: 24px; }
   .detail ul { margin: 0; padding-left: 16px; font-size: 13px; line-height: 1.5; }
@@ -1345,7 +1346,7 @@ addEventListener("DOMContentLoaded", () => {
           <dt>Surface</dt><dd>${r.surface}</dd>
           <dt>Water</dt><dd>${waterLabel[r.water]}. ${r.waterNote}</dd>
           <dt>Pass</dt><dd>${r.pass || "None needed"}</dd>
-          <dt>Season</dt><dd>${seasonText(r.months)}${seasonStrip(r.months)}</dd>
+          <dt>Season</dt><dd>${seasonText(r.months)}${seasonStrip(r.months)}<span class="season-now" id="season-now">${seasonNow(r.months)}</span></dd>
           <dt>Reward</dt><dd>${r.stop}</dd>
         </dl>
         <div>
@@ -1475,6 +1476,18 @@ addEventListener("DOMContentLoaded", () => {
   function seasonText(ms) {
     const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     return seasonRuns(ms, names, (a, b) => `${a}–${b}`);
+  }
+  // Season status for today's month (not the filter month); month lists wrap Dec→Jan.
+  function seasonNow(ms) {
+    const m = new Date().getMonth() + 1, has = (n) => ms.includes(((n - 1) % 12) + 1);
+    if (has(m)) {
+      let end = m;
+      while (end < m + 12 && has(end + 1)) end++;
+      return end >= m + 11 ? "In season now (all year)" : `In season now (through ${MONTH_NAMES[(end - 1) % 12]})`;
+    }
+    let next = m + 1;
+    while (!has(next)) next++;
+    return `Out of season \u2014 next window starts ${MONTH_NAMES[(next - 1) % 12]}`;
   }
   function seasonStrip(ms) {
     const label = `In season: ${seasonRuns(ms, MONTH_NAMES, (a, b) => `${a} to ${b}`)}`;
