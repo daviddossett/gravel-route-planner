@@ -1504,6 +1504,12 @@ addEventListener("DOMContentLoaded", () => {
       return;
     }
     if (e.key !== "Escape") return;
+    const qe = $("#q");
+    if (document.activeElement === qe && qe.value) {
+      e.preventDefault();
+      qe.value = ""; f.q = ""; render();
+      return;
+    }
     if (appEl.classList.contains("panel-open")) { setPanel(false); panelToggle.focus(); return; }
     if (!selected) return;
     const a = document.activeElement;

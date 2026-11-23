@@ -38,7 +38,7 @@ Each route's `type` is `loop`, `out-and-back`, or `point-to-point`. Draw out-and
 
 ## Keyboard shortcuts
 
-Press `/` anywhere (outside a text field) to jump to the route search box; `Esc` closes the details drawer or the route list.
+Press `/` anywhere (outside a text field) to jump to the route search box; In the search box, `Esc` clears the text; otherwise it closes the details drawer or the route list.
 
 Press `j` / `k` (outside a text field) to select the next / previous route in the list, like the drawer's Next / Prev buttons. With nothing selected, `j` selects the first matching route.
 
