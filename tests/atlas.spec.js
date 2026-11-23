@@ -59,6 +59,20 @@ test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: FIXED_DATE });
 });
 
+test("saving and marking a route ridden restyles its map pin", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#save")).toBeVisible();
+  const pin = page.locator(".start-pin.on");
+  await expect(pin).toHaveCount(1);
+  await expect(pin).not.toHaveClass(/saved/);
+  await page.locator("#save").click();
+  await expect(pin).toHaveClass(/saved/);
+  await page.locator("#ridden").click();
+  await expect(pin).toHaveClass(/ridden/);
+  await page.locator("#save").click();
+  await expect(pin).not.toHaveClass(/saved/);
+});
+
 test("demo loads with routes, a visible drawer, and Esc closes it", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto(`${PAGE}?demo`);
@@ -1176,4 +1190,25 @@ test("filters and sort persist between visits, the URL wins, and Reset clears th
   await page.goto(PAGE);
   await expect(page.locator("#region")).toHaveValue("all");
   await expect(page.locator("#sort")).toHaveValue("drive");
+});
+
+test("mobile Routes toggle shows the active filter count and clears on reset", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(PAGE);
+  const label = page.locator("#panel-toggle-label");
+  await expect(label).toHaveText("Routes");
+
+  await page.goto(`${PAGE}?state=WA`);
+  await expect(label).toHaveText("Routes · 1 filter");
+
+  await page.goto(`${PAGE}?state=WA&water=1`);
+  await expect(label).toHaveText("Routes · 2 filters");
+  await expect(page.locator("#panel-toggle")).toHaveAccessibleName("Routes · 2 filters");
+
+  await page.locator("#panel-toggle").click();
+  await expect(label).toHaveText("Show map");
+  await page.locator("#months button[aria-label=January]").click();
+  await page.locator("#reset").click();
+  await page.locator("#panel-toggle").click();
+  await expect(label).toHaveText("Routes");
 });
