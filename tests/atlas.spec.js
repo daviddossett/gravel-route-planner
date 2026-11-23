@@ -933,6 +933,21 @@ test("link-preview image URLs are absolute", async ({ page }) => {
   }
 });
 
+test("Name (A–Z) sorts by route name and persists", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  await page.locator("#sort").selectOption({ label: "Name (A–Z)" });
+  await expect.poll(() => new URL(page.url()).searchParams.get("sort")).toBe("name");
+  const names = () => page.evaluate(() => [...document.querySelectorAll("#list .route")].map((r) => window.PNW_ROUTES.find((x) => x.id === r.dataset.id).name));
+  const got = await names();
+  expect(got.length).toBeGreaterThan(1);
+  expect(got).toEqual([...got].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })));
+  await page.reload();
+  await expect(page.locator("#sort")).toHaveValue("name");
+  await openList(page);
+  expect(await names()).toEqual(got);
+});
+
 test("sort order lands in the URL and is restored from a link", async ({ page }) => {
   await page.goto(`${PAGE}?month=any`);
   await openList(page);
