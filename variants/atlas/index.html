@@ -1181,8 +1181,8 @@ addEventListener("DOMContentLoaded", () => {
       <button class="close" aria-label="Close route details">×</button>
       <div class="info">
         <div class="route-nav" role="group" aria-label="Step through routes" hidden>
-          <button type="button" id="route-prev" aria-label="Previous route">← Prev</button>
-          <button type="button" id="route-next" aria-label="Next route">Next →</button>
+          <button type="button" id="route-prev" aria-label="Previous route" aria-keyshortcuts="k">← Prev</button>
+          <button type="button" id="route-next" aria-label="Next route" aria-keyshortcuts="j">Next →</button>
         </div>
         <h2 id="drawer-title" tabindex="-1">${r.name}</h2>
         <div class="area">${r.area} · ${r.region}, ${r.state}</div>
@@ -1494,6 +1494,13 @@ addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       if (isPhone() && !appEl.classList.contains("panel-open")) setPanel(true);
       $("#q").focus();
+      return;
+    }
+    if ((e.key === "j" || e.key === "k") && !e.ctrlKey && !e.metaKey && !e.altKey && !e.defaultPrevented) {
+      const a = document.activeElement;
+      if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
+      if (selected) stepRoute(e.key === "j" ? 1 : -1);
+      else if (e.key === "j") { const first = listOrder()[0]; if (first) select(first.id, true, true); }
       return;
     }
     if (e.key !== "Escape") return;
