@@ -290,6 +290,7 @@
   .route[aria-selected="true"] h2 { color: var(--rust); }
   .route h2 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.2; }
   .route .where { grid-column: 1; font-size: 13px; color: var(--ink-2); }
+  .route .season { grid-column: 1; font-size: 12px; color: var(--ink-2); overflow-wrap: anywhere; }
   .fun { display: inline-block; font: 700 11px/1 var(--sans); letter-spacing: .02em; padding: 3px 7px 3px; border-radius: 999px; vertical-align: 1px; margin-left: 4px; border: 1px solid currentColor; }
   .fun.f1, .fun.f2 { color: var(--fun-easy); background: var(--fun-easy-bg); }
   .fun.f3 { color: var(--fun-mid); background: var(--fun-mid-bg); }
@@ -920,7 +921,8 @@ addEventListener("DOMContentLoaded", () => {
       const d = driveFrom(r);
       el.innerHTML = `<h2>${r.name}</h2>
         <div class="nums"><b>${distV(r.miles)}</b> ${distU()} · <b>${elevV(r.gain)}</b> ${elevU()}<br>${r.gravel}% gravel<br>${d.h}h from ${d.from.toUpperCase()}</div>
-        <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span>${saved.has(r.id) ? ' <span class="saved-tag">★ Saved</span>' : ""}${ridden.has(r.id) ? ' <span class="saved-tag">✓ Ridden</span>' : ""}${notes[r.id] ? ' <span class="saved-tag" title="Has notes"><span aria-hidden="true">📝</span><span class="sr-only"> Has notes</span></span>' : ""}</div>`;
+        <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span>${saved.has(r.id) ? ' <span class="saved-tag">★ Saved</span>' : ""}${ridden.has(r.id) ? ' <span class="saved-tag">✓ Ridden</span>' : ""}${notes[r.id] ? ' <span class="saved-tag" title="Has notes"><span aria-hidden="true">📝</span><span class="sr-only"> Has notes</span></span>' : ""}</div>
+        <div class="season">Season: ${seasonText(r.months)}</div>`;
       el.addEventListener("click", () => select(r.id, true, true));
       el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(r.id, true, true); } });
       el.addEventListener("mouseenter", () => hover(r.id, true));
@@ -1399,10 +1401,16 @@ addEventListener("DOMContentLoaded", () => {
     returnTo = null;
   }
   function seasonRuns(ms, names, range) {
+    // Treat Dec→Jan as contiguous so a Nov–Mar season reads as one range.
+    if (ms.length < 12 && ms.includes(1) && ms.includes(12)) {
+      const gap = ms.findIndex((m, i) => i && m !== ms[i - 1] + 1);
+      if (gap > 0) ms = [...ms.slice(gap), ...ms.slice(0, gap).map((m) => m + 12)];
+    }
+    const name = (m) => names[(m - 1) % 12];
     const runs = []; let start = ms[0], prev = ms[0];
     for (let i = 1; i <= ms.length; i++) {
       if (ms[i] === prev + 1) { prev = ms[i]; continue; }
-      runs.push(start === prev ? names[start - 1] : range(names[start - 1], names[prev - 1]));
+      runs.push(start === prev ? name(start) : range(name(start), name(prev)));
       start = prev = ms[i];
     }
     return runs.join(", ");
