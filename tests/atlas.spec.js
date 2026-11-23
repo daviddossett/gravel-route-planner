@@ -1311,6 +1311,45 @@ test("filters and sort persist between visits, the URL wins, and Reset clears th
   await expect(page.locator("#sort")).toHaveValue("drive");
 });
 
+test("active filter chips appear, honor units, and remove one filter at a time", async ({ page }) => {
+  for (const size of [{ width: 1440, height: 800 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(size);
+    await page.goto(PAGE);
+    await openList(page);
+    const chips = page.locator("#chips");
+    await expect(chips).toBeHidden();
+    await expect(page.locator("#list .route").first()).toBeVisible();
+
+    await page.locator("#region").selectOption("Cascades");
+    await page.locator("#water-toggle").click();
+    await expect(chips).toBeVisible();
+    await expect(chips).toHaveAttribute("aria-label", "Active filters");
+    await expect(chips.locator("button")).toHaveCount(2);
+    await expect(chips.getByRole("button", { name: "Remove filter: Region Cascades" })).toBeVisible();
+
+    await page.goto(`${PAGE}?dist=50&gain=3000`);
+    await openList(page);
+    await expect(chips).toContainText("Max distance: 50 mi");
+    await page.locator("#units").selectOption("metric");
+    await expect(chips).toContainText("Max distance: 80 km");
+    await expect(chips).toContainText("Max climbing: 910 m");
+    await page.locator("#units").selectOption("imperial");
+
+    await page.goto(`${PAGE}?region=Cascades&water=1`);
+    await openList(page);
+    await chips.getByRole("button", { name: "Remove filter: Region Cascades" }).click();
+    await expect(page.locator("#region")).toHaveValue("all");
+    expect(page.url()).not.toContain("region=");
+    await expect(page.locator("#water-toggle")).toHaveAttribute("aria-pressed", "true");
+    await expect(chips.locator("button")).toHaveCount(1);
+    await expect(chips.locator("button")).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await chips.locator("button").click();
+    await expect(chips).toBeHidden();
+    await expect(page.locator("#list .route[tabindex='0']")).toBeFocused();
+  }
+});
+
 test("mobile Routes toggle shows the active filter count and clears on reset", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(PAGE);
