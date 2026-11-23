@@ -1300,3 +1300,25 @@ test("drawer lists up to 3 similar rides and opens one, even if filtered out", a
   expect(page.url()).not.toContain("route=gales-creek");
   expect(page.url()).toContain("route=");
 });
+
+test("Escape in the search box clears it first, then closes the drawer on the next press", async ({ page }) => {
+  await page.goto(`${PAGE}?demo&route=gales-creek`);
+  const drawer = page.locator("#drawer");
+  await expect(drawer).toHaveClass(/\bopen\b/);
+  const total = await page.locator(".route").count();
+  const q = page.locator("#q");
+  const panelOpened = !(await q.isVisible());
+  if (panelOpened) await page.locator("#panel-toggle").click();
+  await q.focus();
+  await page.keyboard.type("tilla");
+  await expect(page.locator(".route")).not.toHaveCount(total);
+  await page.keyboard.press("Escape");
+  await expect(q).toHaveValue("");
+  await expect(q).toBeFocused();
+  await expect(page.locator(".route")).toHaveCount(total);
+  await expect(drawer).toHaveClass(/\bopen\b/);
+  expect(page.url()).not.toContain("q=");
+  if (panelOpened) await page.keyboard.press("Escape"); // closes the mobile panel first
+  await page.keyboard.press("Escape");
+  await expect(drawer).not.toHaveClass(/\bopen\b/);
+});
