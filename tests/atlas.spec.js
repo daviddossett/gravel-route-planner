@@ -1161,6 +1161,40 @@ test("drawer Prev/Next step through the filtered list, wrap, and update the URL"
   await expect.poll(routeParam).toBe(ids[ids.length - 1]);
 });
 
+test("j / k step through routes like Next / Prev and are ignored while typing", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  const ids = await page.locator("#list .route").evaluateAll((els) => els.map((e) => e.dataset.id));
+  expect(ids.length).toBeGreaterThan(2);
+  const routeParam = () => new URL(page.url()).searchParams.get("route");
+  await page.locator(`#list .route[data-id="${ids[0]}"]`).evaluate((el) => el.click());
+  await expect.poll(routeParam).toBe(ids[0]);
+
+  await page.keyboard.press("j");
+  await expect.poll(routeParam).toBe(ids[1]);
+  await page.keyboard.press("k");
+  await expect.poll(routeParam).toBe(ids[0]);
+  await expect(page.locator("#route-next")).toHaveAttribute("aria-keyshortcuts", "j");
+  await expect(page.locator("#route-prev")).toHaveAttribute("aria-keyshortcuts", "k");
+
+  await openList(page);
+  await page.locator("#q").focus();
+  await page.keyboard.type("jkjk");
+  await expect(page.locator("#q")).toHaveValue("jkjk");
+  expect([ids[1], ids[ids.length - 1]]).not.toContain(routeParam());
+});
+
+test("j selects the first route when nothing is selected and k does nothing", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#drawer")).not.toHaveClass(/\bopen\b/);
+  const routeParam = () => new URL(page.url()).searchParams.get("route");
+  await page.keyboard.press("k");
+  await expect.poll(routeParam).toBe(null);
+  const first = await page.locator("#list .route").first().getAttribute("data-id");
+  await page.keyboard.press("j");
+  await expect.poll(routeParam).toBe(first);
+});
+
 test("Pressing / focuses the search box without typing it, and is ignored inside text fields", async ({ page }) => {
   await page.goto(`${PAGE}?demo`);
   await expect(page.locator("#list .route").first()).toBeAttached();
@@ -1247,4 +1281,22 @@ test("mobile Routes toggle shows the active filter count and clears on reset", a
   await page.locator("#reset").click();
   await page.locator("#panel-toggle").click();
   await expect(label).toHaveText("Routes");
+});
+
+test("drawer lists up to 3 similar rides and opens one, even if filtered out", async ({ page }) => {
+  await page.goto(`${PAGE}?demo&route=gales-creek`);
+  const items = page.locator("#drawer #similar-list .similar-btn");
+  const n = await items.count();
+  expect(n).toBeGreaterThan(0);
+  expect(n).toBeLessThanOrEqual(3);
+  await expect(page.locator("#drawer").getByRole("heading", { name: "Similar rides" })).toBeVisible();
+  await expect(page.locator("#drawer #similar-list")).not.toContainText("Gales Creek");
+  const name = (await items.first().locator(".similar-name").textContent()).trim();
+  await page.locator("#q").evaluate((el) => { el.value = "Gales Creek"; el.dispatchEvent(new Event("input", { bubbles: true })); });
+  await expect(page.locator(".route")).toHaveCount(1);
+  await items.first().click();
+  await expect(page.locator("#drawer-title")).toHaveText(name);
+  await expect(page.locator("#drawer-title")).toBeFocused();
+  expect(page.url()).not.toContain("route=gales-creek");
+  expect(page.url()).toContain("route=");
 });
