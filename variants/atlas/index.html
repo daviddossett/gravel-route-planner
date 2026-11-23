@@ -1481,7 +1481,10 @@ addEventListener("DOMContentLoaded", () => {
     selected = null; d.classList.remove("open"); d.inert = true;
     document.querySelectorAll(".route").forEach((el) => el.setAttribute("aria-selected", "false"));
     styleLines();
-    syncUrl();
+    // Close a route entry we pushed by going back, so Back/Forward stay in step.
+    let backing = false;
+    try { if (!fromPop && history.state && history.state.atlasPushed) { history.back(); backing = true; } } catch (e) { /* file:// */ }
+    syncUrl(backing);
     if (restoreFocus) {
       const fromList = returnTo && returnTo.isConnected && $("#panel").contains(returnTo);
       let back = returnTo && returnTo.isConnected && returnTo !== document.body ? returnTo
@@ -1644,13 +1647,19 @@ addEventListener("DOMContentLoaded", () => {
     const q = stateParams().toString();
     return location.href.split(/[?#]/)[0] + (q ? `?${q}` : "");
   }
-  function syncUrl() {
+  let allowPush = false, fromPop = false; // pushState only for user-opened routes, never during load or popstate
+  function syncUrl(titleOnly) {
     const sel = selected && ROUTES.find((x) => x.id === selected);
     document.title = sel ? `${sel.name} · Gravel Atlas` : "Gravel Atlas · Pacific Northwest";
     const p = stateParams();
     if (new URLSearchParams(location.search).has("demo")) p.set("demo", "");
     const q = p.toString().replace(/demo=(&|$)/, "demo$1");
-    try { history.replaceState(null, "", location.pathname + (q ? `?${q}` : "") + location.hash); } catch (e) { /* file:// in some browsers */ }
+    if (titleOnly) return;
+    const url = location.pathname + (q ? `?${q}` : "") + location.hash;
+    try {
+      if (sel && allowPush && !fromPop && !new URLSearchParams(location.search).has("route")) history.pushState({ atlasPushed: true }, "", url);
+      else history.replaceState(history.state, "", url);
+    } catch (e) { /* file:// in some browsers */ }
   }
   function readUrl() {
     const p = new URLSearchParams(location.search);
@@ -1767,6 +1776,16 @@ addEventListener("DOMContentLoaded", () => {
     toast("Filters loosened to show the linked route");
   }
 
+  window.addEventListener("popstate", () => {
+    const id = new URLSearchParams(location.search).get("route");
+    fromPop = true;
+    try {
+      if (id && ROUTES.some((x) => x.id === id)) { if (id !== selected) { revealRoute(id); select(id, true); } }
+      else if (selected) closeDrawer();
+    } finally { fromPop = false; }
+    syncUrl();
+  });
+
   const linked = readUrl();
   render();
   if (linked) {
@@ -1776,6 +1795,7 @@ addEventListener("DOMContentLoaded", () => {
   filtersLive = true;
   if (nothingInSeason && !monthExplicit) toast(`Nothing is in season in ${MONTH_NAMES[thisMonth - 1]}, so showing all months.`);
   const first = ROUTES.filter(matches)[0];
+  allowPush = true;
   if (!linked && new URLSearchParams(location.search).has("demo") && first) select(first.id, true);
 });
 </script>
