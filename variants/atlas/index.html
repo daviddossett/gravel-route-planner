@@ -361,6 +361,10 @@
   .compare thead th { color: var(--ink-2); font-weight: 600; }
   .compare td.better { font-weight: 600; color: var(--ink); }
   .plan { margin-top: 10px; }
+  .notes { margin-top: 10px; }
+  .notes label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .notes small { font-weight: 400; color: var(--muted, inherit); }
+  .notes textarea { width: 100%; box-sizing: border-box; font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 6px; resize: vertical; }
   .plan label { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
   .plan input { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
   .tire-fit { margin-top: 10px; }
@@ -631,6 +635,9 @@ addEventListener("DOMContentLoaded", () => {
   const RIDDEN_KEY = "atlas.ridden";
   const ridden = new Set((() => { try { const v = JSON.parse(localStorage.getItem(RIDDEN_KEY)); return Array.isArray(v) ? v : []; } catch { return []; } })());
   const persistRidden = () => { try { localStorage.setItem(RIDDEN_KEY, JSON.stringify([...ridden])); } catch {} };
+  const NOTES_KEY = "atlas.notes", NOTE_MAX = 500;
+  const notes = (() => { try { const v = JSON.parse(localStorage.getItem(NOTES_KEY)); const o = {}; if (v && typeof v === "object" && !Array.isArray(v)) for (const [k, t] of Object.entries(v)) if (typeof t === "string" && t) o[k] = t.slice(0, NOTE_MAX); return o; } catch { return {}; } })();
+  const persistNotes = () => { try { Object.keys(notes).length ? localStorage.setItem(NOTES_KEY, JSON.stringify(notes)) : localStorage.removeItem(NOTES_KEY); } catch {} };
   let savedOnly = false, hideRidden = false, fitTires = false;
   let selected = null;
   let active = null; // the one route row in the tab order (roving tabindex)
@@ -886,7 +893,7 @@ addEventListener("DOMContentLoaded", () => {
       const d = driveFrom(r);
       el.innerHTML = `<h2>${r.name}</h2>
         <div class="nums"><b>${distV(r.miles)}</b> ${distU()} · <b>${elevV(r.gain)}</b> ${elevU()}<br>${r.gravel}% gravel<br>${d.h}h from ${d.from.toUpperCase()}</div>
-        <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span>${saved.has(r.id) ? ' <span class="saved-tag">★ Saved</span>' : ""}${ridden.has(r.id) ? ' <span class="saved-tag">✓ Ridden</span>' : ""}</div>`;
+        <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span>${saved.has(r.id) ? ' <span class="saved-tag">★ Saved</span>' : ""}${ridden.has(r.id) ? ' <span class="saved-tag">✓ Ridden</span>' : ""}${notes[r.id] ? ' <span class="saved-tag" title="Has notes"><span aria-hidden="true">📝</span><span class="sr-only"> Has notes</span></span>' : ""}</div>`;
       el.addEventListener("click", () => select(r.id, true, true));
       el.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(r.id, true, true); } });
       el.addEventListener("mouseenter", () => hover(r.id, true));
@@ -1236,6 +1243,10 @@ addEventListener("DOMContentLoaded", () => {
           ${typeof navigator.share === "function" ? '<button class="btn ghost" id="share" type="button">Share</button>' : ""}
           <button class="btn ghost" id="zoom">Zoom to route</button>
         </div>
+        <div class="notes">
+          <label for="route-notes">My notes <small>(private, saved on this device)</small></label>
+          <textarea id="route-notes" maxlength="${NOTE_MAX}" rows="3" placeholder="Gate codes, water stops, what to skip…"></textarea>
+        </div>
         <div class="sticker" aria-label="Badge for riding this route: ${r.badge}"><small>Ride it, earn it</small><b>${r.badge}</b></div>
       </div>
       <div class="detail">
@@ -1305,6 +1316,15 @@ addEventListener("DOMContentLoaded", () => {
     };
     d.querySelector("#download-brief").onclick = () => downloadBrief(r);
     d.querySelector("#download-gpx").onclick = () => downloadGpx(r);
+    const noteEl = d.querySelector("#route-notes");
+    noteEl.value = notes[r.id] || "";
+    noteEl.oninput = () => {
+      const t = noteEl.value.slice(0, NOTE_MAX);
+      const had = !!notes[r.id];
+      if (t.trim()) notes[r.id] = t; else delete notes[r.id];
+      persistNotes();
+      if (had !== !!notes[r.id]) render();
+    };
     d.querySelector("#save").onclick = (e) => {
       const on = !saved.has(r.id);
       on ? saved.add(r.id) : saved.delete(r.id);
@@ -1398,7 +1418,7 @@ addEventListener("DOMContentLoaded", () => {
   }
   // Back up / restore: Saved and Ridden ids travel as a small JSON file and merge on import.
   function downloadMarks() {
-    const data = { version: 1, saved: [...saved], ridden: [...ridden] };
+    const data = { version: 1, saved: [...saved], ridden: [...ridden], notes: { ...notes } };
     const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: "application/json" }));
     const a = Object.assign(document.createElement("a"), { href: url, download: "gravel-atlas-routes.json" });
     document.body.appendChild(a); a.click(); a.remove();
@@ -1414,14 +1434,28 @@ addEventListener("DOMContentLoaded", () => {
     const s = keep(data.saved), rd = keep(data.ridden);
     const added = s.filter((id) => !saved.has(id)).length + rd.filter((id) => !ridden.has(id)).length;
     s.forEach((id) => saved.add(id)); rd.forEach((id) => ridden.add(id));
-    persistSaved(); persistRidden();
+    // Notes merge: an existing non-empty note is kept; a different imported one is skipped and counted.
+    let notesAdded = 0, notesSkipped = 0;
+    const inNotes = data.notes && typeof data.notes === "object" && !Array.isArray(data.notes) ? data.notes : {};
+    for (const [id, t] of Object.entries(inNotes)) {
+      if (!known.has(id) || typeof t !== "string" || !t.trim()) continue;
+      const n = t.slice(0, NOTE_MAX);
+      if (!notes[id]) { notes[id] = n; notesAdded++; } else if (notes[id] !== n) notesSkipped++;
+    }
+    persistSaved(); persistRidden(); persistNotes();
     if (selected) {
       const sb = $("#save"), rb = $("#ridden");
       if (sb) { const on = saved.has(selected); sb.setAttribute("aria-pressed", on); sb.textContent = on ? "★ Saved" : "☆ Save for later"; }
+      const ne = $("#route-notes"); if (ne) ne.value = notes[selected] || "";
       if (rb) { const on = ridden.has(selected); rb.setAttribute("aria-pressed", on); rb.textContent = on ? "✓ Ridden" : "Mark as ridden"; }
     }
     render();
-    toast(added ? `Imported ${added} route mark${added === 1 ? "" : "s"}.` : "Nothing new to import.");
+    const bits = [];
+    if (added) bits.push(`${added} route mark${added === 1 ? "" : "s"}`);
+    if (notesAdded) bits.push(`${notesAdded} note${notesAdded === 1 ? "" : "s"}`);
+    let msg = bits.length ? `Imported ${bits.join(" and ")}.` : "Nothing new to import.";
+    if (notesSkipped) msg += ` Kept your existing text for ${notesSkipped} note${notesSkipped === 1 ? "" : "s"} that differed.`;
+    toast(msg);
   }
   $("#export-marks").onclick = downloadMarks;
   $("#import-marks").onclick = () => $("#import-file").click();
