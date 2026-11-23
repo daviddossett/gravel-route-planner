@@ -35,7 +35,7 @@ test("Saved and Ridden marks export to JSON and import back, and bad files chang
   const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#export-marks").click()]);
   expect(download.suggestedFilename()).toBe("gravel-atlas-routes.json");
   const exported = JSON.parse(require("fs").readFileSync(await download.path(), "utf8"));
-  expect(exported).toEqual({ version: 1, saved: [id], ridden: [id] });
+  expect(exported).toEqual({ version: 1, saved: [id], ridden: [id], notes: {} });
 
   await page.evaluate(() => localStorage.clear());
   await page.reload();
@@ -48,6 +48,40 @@ test("Saved and Ridden marks export to JSON and import back, and bad files chang
   await page.locator("#import-file").setInputFiles({ name: "bad.json", mimeType: "application/json", buffer: Buffer.from("not json") });
   await expect(page.locator("#toast")).toContainText("Nothing changed");
   await expect(page.locator("#saved-toggle")).toHaveText("Saved (1)");
+});
+
+test("private route notes persist, mark the list row, and round-trip through backup", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#list .route").first()).toBeAttached();
+  const note = "Gate code 1234 <b>x</b>";
+  await page.locator("#route-notes").fill(note);
+  const id = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem("atlas.notes")))[0]);
+  await expect(page.locator("#list .route", { hasText: "Has notes" })).toHaveCount(1);
+  await expect(page.locator("#list b")).toHaveCount(await page.locator("#list .route .nums b").count());
+  await page.reload();
+  await expect(page.locator("#route-notes")).toHaveValue(note);
+
+  await openList(page);
+  const [download] = await Promise.all([page.waitForEvent("download"), page.locator("#export-marks").click()]);
+  const exported = JSON.parse(require("fs").readFileSync(await download.path(), "utf8"));
+  expect(exported.notes).toEqual({ [id]: note });
+
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await page.locator("#import-file").setInputFiles({ name: "n.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ version: 1, saved: [], ridden: [], notes: { [id]: "other", nope: "x" } })) });
+  await expect(page.locator("#toast")).toContainText("1 note");
+  await expect(page.locator("#route-notes")).toHaveValue("other");
+  // Existing notes are kept when an import differs.
+  await page.locator("#import-file").setInputFiles({ name: "n2.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ version: 1, saved: [], ridden: [], notes: { [id]: "different" } })) });
+  await expect(page.locator("#toast")).toContainText("Kept your existing text");
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem("atlas.notes")))).toEqual({ [id]: "other" });
+  // Old backups without notes still import.
+  await page.locator("#import-file").setInputFiles({ name: "old.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ version: 1, saved: [id], ridden: [] })) });
+  await expect(page.locator("#saved-toggle")).toHaveText("Saved (1)");
+
+  await page.locator("#route-notes").fill("");
+  expect(await page.evaluate(() => localStorage.getItem("atlas.notes"))).toBeNull();
+  await expect(page.locator("#list .route", { hasText: "Has notes" })).toHaveCount(0);
 });
 
 async function openList(page) {
