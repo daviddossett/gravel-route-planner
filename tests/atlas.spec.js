@@ -587,6 +587,14 @@ test("drive origin changes the listed drive times and is remembered", async ({ p
   await expect(nums.first()).toContainText("from PDX");
 });
 
+test("route rows show drive time as hours and minutes, not decimals", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  const texts = await page.locator("#list .route .nums").allTextContents();
+  expect(texts.length).toBeGreaterThan(0);
+  for (const t of texts) expect(t).toMatch(/(\d+h( \d+m)?|\d+m) from (PDX|SEA)/);
+});
+
 test("route list is keyboard operable: arrows move focus, Enter opens the drawer, Esc returns focus", async ({ page }) => {
   await page.goto(PAGE);
   await openList(page);

@@ -1016,7 +1016,7 @@ addEventListener("DOMContentLoaded", () => {
       el.setAttribute("aria-selected", r.id === selected);
       const d = driveFrom(r);
       el.innerHTML = `<h2>${r.name}</h2>
-        <div class="nums"><b>${distV(r.miles)}</b> ${distU()} · <b>${elevV(r.gain)}</b> ${elevU()}<br>${r.gravel}% gravel<br>${d.h}h from ${d.from.toUpperCase()}</div>
+        <div class="nums"><b>${distV(r.miles)}</b> ${distU()} · <b>${elevV(r.gain)}</b> ${elevU()}<br>${r.gravel}% gravel<br>${hm(d.h)} from ${d.from.toUpperCase()}</div>
         <div class="where">${TYPE[r.type]} · ${r.region}, ${r.state} <span class="fun f${r.difficulty}">${FUN[r.difficulty]}</span>${saved.has(r.id) ? ' <span class="saved-tag">★ Saved</span>' : ""}${ridden.has(r.id) ? ' <span class="saved-tag">✓ Ridden</span>' : ""}${r.pass ? ` <span class="pass-tag" title="Pass needed: ${String(r.pass).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c])}"><span aria-hidden="true">🎫</span><span class="sr-only"> Pass needed</span></span>` : ""}${notes[r.id] ? ' <span class="saved-tag" title="Has notes"><span aria-hidden="true">📝</span><span class="sr-only"> Has notes</span></span>' : ""}</div>
         <div class="season">Season: ${seasonText(r.months)}</div>`;
       el.addEventListener("click", () => select(r.id, true, true));
@@ -1259,7 +1259,7 @@ addEventListener("DOMContentLoaded", () => {
     const out = d.querySelector("#compare-out"), other = ROUTES.find((x) => x.id === d.querySelector("#compare-with").value);
     if (other) out.innerHTML = compareHTML(r, other);
   }
-  const hm = (h) => { const m = Math.round(h * 60); return m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m / 60}h`; };
+  const hm = (h) => { const m = Math.round(h * 60); return m < 60 ? `${m}m` : m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m / 60}h`; };
   // Climbing per mile from the stated stats: a better sense of effort than total gain alone.
   const climbFeelText = (r) => {
     const perMile = Math.round(r.gain / r.miles);
