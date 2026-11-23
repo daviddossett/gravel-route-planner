@@ -512,7 +512,7 @@
   <aside class="panel" id="panel" aria-label="Route filters and list">
     <header class="masthead">
       <h1>Gravel Atlas</h1>
-      <button class="spin" id="spin" type="button" title="Pick a random route from the ones that match">
+      <button class="spin" id="spin" type="button" aria-keyshortcuts="x" title="Pick a random route from the ones that match">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle class="face" cx="12" cy="12" r="10.5" stroke-width="1.5"/><g class="needle"><path class="n" d="M12 3.5l2.6 8.5h-5.2z"/><path class="s" d="M12 20.5l-2.6-8.5h5.2z"/></g><circle class="face" cx="12" cy="12" r="1.4" stroke-width="0"/></svg>
         Surprise me
       </button>
@@ -643,6 +643,7 @@
         <dt><kbd>J</kbd> / <kbd>K</kbd></dt><dd>Next / previous route</dd>
         <dt><kbd>S</kbd></dt><dd>Save or unsave the selected route</dd>
         <dt><kbd>R</kbd></dt><dd>Mark the selected route ridden or not</dd>
+        <dt><kbd>X</kbd></dt><dd>Pick a random route</dd>
         <dt><kbd>Esc</kbd></dt><dd>Clear search, close the drawer or route list</dd>
         <dt><kbd>?</kbd></dt><dd>Show or hide this help</dd>
       </dl>
@@ -836,15 +837,20 @@ addEventListener("DOMContentLoaded", () => {
   }
   const offline = window.AtlasOffline && AtlasOffline.init({ routes: ROUTES, map, el: $("#fallback"), onSelect: (id) => select(id, true) });
 
-  function matches(r) {
+  // `skip` ignores one filter ('state' or 'type') so option counts show what choosing it would leave.
+  const STATE_LABELS = { all: "Both", OR: "Oregon", WA: "Washington" };
+  const TYPE_LABELS = { all: "Any", loop: "Loop", "out-and-back": "Out-and-back", "point-to-point": "Point-to-point" };
+
+  // `skip` placeholder
+  function matches(r, skip) {
     const q = f.q.trim().toLowerCase();
     if (q && ![r.name, r.start, r.region, r.area].some((t) => t && t.toLowerCase().includes(q))) return false;
     if (f.month && !r.months.includes(f.month)) return false;
-    if (f.state !== "all" && r.state !== f.state) return false;
+    if (skip !== "state" && f.state !== "all" && r.state !== f.state) return false;
     if (savedOnly && !saved.has(r.id)) return false;
     if (hideRidden && ridden.has(r.id)) return false;
     if (fitTires && myTire && r.tire > myTire) return false; // same rule as tireFitText: gap <= 0 is a fit
-    if (f.type !== "all" && r.type !== f.type) return false;
+    if (skip !== "type" && f.type !== "all" && r.type !== f.type) return false;
     if (f.region !== "all" && r.region !== f.region) return false;
     if (f.water && r.water === "none") return false;
     if (f.nopass && r.pass) return false;
@@ -939,6 +945,13 @@ addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("#state button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === f.state));
     document.querySelectorAll("#origin button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === f.origin));
     ["mind", "dist", "gain", "grav", "drive", "fun"].forEach((k) => $("#" + k).value = f[k]);
+    const byState = ROUTES.filter((r) => matches(r, "state")), byType = ROUTES.filter((r) => matches(r, "type"));
+    document.querySelectorAll("#state button").forEach((b) => {
+      b.textContent = `${STATE_LABELS[b.dataset.v]} (${b.dataset.v === "all" ? byState.length : byState.filter((r) => r.state === b.dataset.v).length})`;
+    });
+    [...$("#type").options].forEach((o) => {
+      o.text = `${TYPE_LABELS[o.value]} (${o.value === "all" ? byType.length : byType.filter((r) => r.type === o.value).length})`;
+    });
     $("#type").value = f.type;
     $("#region").value = f.region;
     $("#mind-out").textContent = f.mind === defaults.mind ? "Any" : `${distV(f.mind)} ${distU()}`;
@@ -1724,6 +1737,13 @@ addEventListener("DOMContentLoaded", () => {
       if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
       const btn = selected && $(e.key === "s" ? "#save" : "#ridden");
       if (btn) { e.preventDefault(); btn.click(); }
+      return;
+    }
+    if ((e.key === "x" || e.key === "X") && !e.ctrlKey && !e.metaKey && !e.altKey && !e.defaultPrevented) {
+      const a = document.activeElement;
+      if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
+      e.preventDefault();
+      $("#spin").click();
       return;
     }
     if (e.key !== "Escape") return;

@@ -1732,3 +1732,42 @@ test("a shared ?route= link adds no history entry", async ({ page }) => {
   await page.goBack();
   await expect(page).toHaveURL("about:blank");
 });
+
+test("x picks a random route like Surprise me, and is ignored while typing or with modifiers", async ({ page }) => {
+  await page.goto(PAGE);
+  await page.locator("#list .route").first().waitFor({ state: "attached" });
+  await expect(page.locator("#spin")).toHaveAttribute("aria-keyshortcuts", "x");
+  await expect(page.locator("#drawer")).toHaveAttribute("inert", "");
+
+  await openList(page);
+  await page.locator("#q").focus();
+  await page.keyboard.type("x");
+  await expect(page.locator("#q")).toHaveValue("x");
+  await page.locator("#q").fill("");
+  await page.locator("body").click({ position: { x: 1, y: 1 } });
+  await page.keyboard.press("Control+x");
+  await page.waitForTimeout(1200);
+  await expect(page.locator("#drawer")).toHaveAttribute("inert", "");
+
+  await page.locator("#q").blur();
+  await page.keyboard.press("x");
+  await expect(page.locator("#drawer")).not.toHaveAttribute("inert", "");
+  await expect(page.locator("#help")).toContainText("Pick a random route");
+});
+
+test("State and Route type options show counts that follow the other filters", async ({ page }) => {
+  await page.clock.setFixedTime(FIXED_DATE);
+  await page.goto(`${PAGE}?demo`);
+  await openList(page);
+  const num = async (loc) => +(/\((\d+)\)/.exec((await loc.textContent()) || "") || [])[1];
+  const all = page.locator('#state button[data-v="all"]');
+  const or = page.locator('#state button[data-v="OR"]'), wa = page.locator('#state button[data-v="WA"]');
+  await expect(all).toHaveText(/^Both \(\d+\)$/);
+  expect(await num(all)).toBe((await num(or)) + (await num(wa)));
+  await expect(page.locator('#type option[value="loop"]')).toHaveText(/^Loop \(\d+\)$/);
+  const before = await num(all);
+  await page.locator('#state button[data-v="WA"]').click();
+  expect(await num(all)).toBe(before); // state counts ignore the state filter itself
+  await expect(page.locator('#type option[value="all"]')).toHaveText(`Any (${await num(wa)})`);
+  await expect(page.locator("#type")).toHaveValue("all");
+});
