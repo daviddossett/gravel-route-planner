@@ -278,6 +278,9 @@
   .list-head .sort { display: flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 14px; }
   .list-head .saved-toggle { white-space: nowrap; margin-right: 10px; order: 1; text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; min-height: 28px; color: var(--ink); }
   .list-head .saved-toggle[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .badges { padding: 8px 22px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--line); }
+  .badges button { font: 500 13px var(--sans); background: none; border: 0; padding: 4px 0; min-height: 28px; color: var(--forest); cursor: pointer; text-align: left; }
+  .badges ul { margin: 4px 0 0; padding-left: 18px; overflow-wrap: anywhere; }
   .saved-tag { white-space: nowrap; font: 700 11px/1 var(--sans); letter-spacing: .02em; color: var(--forest); margin-left: 4px; }
   .filters select, .list-head select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; }
   .list { overflow-y: auto; flex: 1; min-height: 0; }
@@ -584,6 +587,10 @@
         <button type="button" id="export-marks">Export</button>
         <button type="button" id="import-marks">Import</button>
         <input type="file" id="import-file" accept=".json,application/json" hidden></span></div>
+    <div class="badges" id="badges" hidden>
+      <button type="button" id="badges-toggle" aria-expanded="false" aria-controls="badges-list"></button>
+      <ul id="badges-list" hidden></ul>
+    </div>
     <div class="list" id="list" role="listbox" aria-label="Matching routes"></div>
     <div class="empty" id="empty" hidden>Nothing out there fits all of that. Even the cows are confused. Try another month or <button type="button" id="reset2">reset filters</button>.
       <div id="empty-hints" hidden><p>Or loosen just one thing:</p><ul></ul></div></div>
@@ -686,6 +693,11 @@ addEventListener("DOMContentLoaded", () => {
   $("#region").addEventListener("change", (e) => { f.region = e.target.value; render(); });
   $("#q").addEventListener("input", (e) => { f.q = e.target.value; render(); });
   const resetFilters = () => { Object.assign(f, defaults, { month: 0 }); $("#q").value = ""; savedOnly = false; hideRidden = false; fitTires = false; saveOrigin(); render(); clearFilters(); fitResults(); };
+  $("#badges-toggle").addEventListener("click", (e) => {
+    const open = e.currentTarget.getAttribute("aria-expanded") !== "true";
+    e.currentTarget.setAttribute("aria-expanded", open);
+    $("#badges-list").hidden = !open;
+  });
   $("#saved-toggle").addEventListener("click", () => { savedOnly = !savedOnly; render(); });
   $("#ridden-toggle").addEventListener("click", () => { hideRidden = !hideRidden; render(); });
   $("#tire-toggle").addEventListener("click", () => { fitTires = !fitTires; render(); });
@@ -836,6 +848,15 @@ addEventListener("DOMContentLoaded", () => {
     rt.hidden = !riddenKnown;
     rt.textContent = "Not ridden yet";
     rt.setAttribute("aria-pressed", hideRidden);
+    const earned = ROUTES.filter((r) => ridden.has(r.id));
+    const bd = $("#badges");
+    bd.hidden = !earned.length;
+    if (earned.length) {
+      $("#badges-toggle").textContent = `Badges earned: ${earned.length} of ${ROUTES.length}`;
+      const bl = $("#badges-list");
+      bl.replaceChildren(...earned.map((r) => { const li = document.createElement("li"); li.textContent = `${r.badge} (${r.name})`; return li; }));
+    }
+    $("#badges-list").hidden = !earned.length || $("#badges-toggle").getAttribute("aria-expanded") !== "true";
     if (!myTire) fitTires = false;
     const tt = $("#tire-toggle");
     tt.hidden = !myTire;
