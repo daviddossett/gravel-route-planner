@@ -1371,3 +1371,60 @@ test("Escape in the search box clears it first, then closes the drawer on the ne
   await page.keyboard.press("Escape");
   await expect(drawer).not.toHaveClass(/\bopen\b/);
 });
+
+test("? opens the keyboard shortcuts dialog, Esc closes it, and ? in the search box does not", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  const help = page.locator("#help");
+  const q = page.locator("#q");
+  await expect(help).toBeHidden();
+  await page.locator("#list .route").first().waitFor({ state: "attached" });
+
+  await openList(page);
+  await q.focus();
+  await page.keyboard.type("?");
+  await expect(q).toHaveValue("?");
+  await expect(help).toBeHidden();
+  await q.fill("");
+
+  await page.evaluate(() => document.activeElement.blur());
+  await page.keyboard.press("?");
+  await expect(help).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+  await expect(page.locator("#help-close")).toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(help).toBeHidden();
+
+  await page.keyboard.press("?");
+  await expect(help).toBeVisible();
+  await page.keyboard.press("?");
+  await expect(help).toBeHidden();
+});
+
+test("Esc in the shortcuts dialog does not also close the route drawer", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  const row = page.locator("#list .route").first();
+  await row.waitFor({ state: "attached" });
+  await row.evaluate((el) => el.click());
+  await expect(page.locator("#drawer")).toHaveClass(/open/);
+  await page.evaluate(() => document.activeElement.blur());
+  await page.keyboard.press("?");
+  await expect(page.locator("#help")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#help")).toBeHidden();
+  await expect(page.locator("#drawer")).toHaveClass(/open/);
+});
+
+test("the Keyboard shortcuts header button is fully visible inside the viewport", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await openList(page);
+  const btn = page.locator("#help-open");
+  await expect(btn).toBeVisible();
+  const box = await btn.boundingBox();
+  const vp = page.viewportSize();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(vp.width);
+  expect(box.height).toBeLessThan(40);
+  await btn.click();
+  await expect(page.locator("#help")).toBeVisible();
+});

@@ -486,6 +486,18 @@
     .drawer:not(.open) { display: none; }
     .drawer .close, .drawer .actions, .drawer .route-nav, .drawer .copy-coords { display: none !important; }
   }
+  .help-link { grid-column: 1 / -1; justify-self: start; margin-top: 8px; white-space: nowrap; font: inherit; font-size: 12px; padding: 6px 8px; color: var(--ink-2); background: none; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+  .help-link:hover { color: var(--ink); }
+  .help-overlay { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgb(var(--shadow) / .55); }
+  .help-overlay[hidden] { display: none; }
+  .help-dialog { width: min(420px, 100%); max-height: 100%; overflow: auto; padding: 18px 20px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+  .help-dialog h2 { margin: 0 0 12px; font-size: 18px; }
+  .help-dialog dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 0 0 16px; font-size: 14px; }
+  .help-dialog dt { white-space: nowrap; }
+  .help-dialog dd { margin: 0; color: var(--ink-2); }
+  .help-dialog kbd { font-family: var(--mono); font-size: 12px; padding: 2px 6px; background: var(--paper); border: 1px solid var(--line); border-radius: 4px; }
+  .help-dialog button { font: inherit; font-size: 13px; padding: 6px 14px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+  @media print { .help-overlay { display: none !important; } }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -521,6 +533,7 @@
           <option value="metric">Kilometers / meters</option>
         </select>
       </div>
+      <button class="help-link" id="help-open" type="button" aria-haspopup="dialog" aria-keyshortcuts="?">Keyboard shortcuts</button>
     </header>
 
     <section class="filters" aria-label="Filters">
@@ -608,6 +621,18 @@
     <div class="toast" id="toast" role="status"></div>
     <section class="drawer" id="drawer" aria-label="Selected route" inert></section>
   </main>
+  <div class="help-overlay" id="help" hidden>
+    <div class="help-dialog" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <h2 id="help-title">Keyboard shortcuts</h2>
+      <dl>
+        <dt><kbd>/</kbd></dt><dd>Search routes</dd>
+        <dt><kbd>J</kbd> / <kbd>K</kbd></dt><dd>Next / previous route</dd>
+        <dt><kbd>Esc</kbd></dt><dd>Clear search, close the drawer or route list</dd>
+        <dt><kbd>?</kbd></dt><dd>Show or hide this help</dd>
+      </dl>
+      <button type="button" id="help-close">Close</button>
+    </div>
+  </div>
   <button class="panel-toggle" id="panel-toggle" type="button" aria-controls="panel" aria-expanded="false">
     <svg class="to-list" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
     <svg class="to-map" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14"/></svg>
@@ -1544,7 +1569,30 @@ addEventListener("DOMContentLoaded", () => {
     return r ? r.id : null;
   }
   let tt; function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(tt); tt = setTimeout(() => t.classList.remove("show"), 1800); }
+  const helpEl = $("#help");
+  let helpReturn = null;
+  function setHelp(open) {
+    if (open === !helpEl.hidden) return;
+    helpEl.hidden = !open;
+    if (open) { helpReturn = document.activeElement; $("#help-close").focus(); }
+    else if (helpReturn && helpReturn.isConnected) { helpReturn.focus(); helpReturn = null; }
+  }
+  $("#help-open").addEventListener("click", () => setHelp(true));
+  $("#help-close").addEventListener("click", () => setHelp(false));
+  helpEl.addEventListener("click", (e) => { if (e.target === helpEl) setHelp(false); });
   document.addEventListener("keydown", (e) => {
+    if (!helpEl.hidden) {
+      if (e.key === "Escape" || e.key === "?") { e.preventDefault(); setHelp(false); }
+      else if (e.key === "Tab") { e.preventDefault(); $("#help-close").focus(); }
+      return;
+    }
+    if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.defaultPrevented) {
+      const a = document.activeElement;
+      if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
+      e.preventDefault();
+      setHelp(true);
+      return;
+    }
     if (e.key === "/" && !e.ctrlKey && !e.metaKey && !e.altKey && !e.defaultPrevented) {
       const a = document.activeElement;
       if (a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
