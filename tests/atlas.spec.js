@@ -1693,3 +1693,25 @@ test("in a month with no routes the month filter falls back to Any month, unless
   await expect(page.locator("#toast")).not.toHaveClass(/show/);
   expect(errors).toEqual([]);
 });
+
+test("x picks a random route like Surprise me, and is ignored while typing or with modifiers", async ({ page }) => {
+  await page.goto(PAGE);
+  await page.locator("#list .route").first().waitFor({ state: "attached" });
+  await expect(page.locator("#spin")).toHaveAttribute("aria-keyshortcuts", "x");
+  await expect(page.locator("#drawer")).toHaveAttribute("inert", "");
+
+  await openList(page);
+  await page.locator("#q").focus();
+  await page.keyboard.type("x");
+  await expect(page.locator("#q")).toHaveValue("x");
+  await page.locator("#q").fill("");
+  await page.locator("body").click({ position: { x: 1, y: 1 } });
+  await page.keyboard.press("Control+x");
+  await page.waitForTimeout(1200);
+  await expect(page.locator("#drawer")).toHaveAttribute("inert", "");
+
+  await page.locator("#q").blur();
+  await page.keyboard.press("x");
+  await expect(page.locator("#drawer")).not.toHaveAttribute("inert", "");
+  await expect(page.locator("#help")).toContainText("Pick a random route");
+});
