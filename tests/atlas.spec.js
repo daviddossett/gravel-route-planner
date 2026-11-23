@@ -994,6 +994,18 @@ test("link-preview image URLs are absolute", async ({ page }) => {
   }
 });
 
+test("Steepest per mile sorts by gain/miles, persists and reloads", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  await page.locator("#sort").selectOption({ label: "Steepest per mile" });
+  await expect.poll(() => new URL(page.url()).searchParams.get("sort")).toBe("steep");
+  const ratios = await page.evaluate(() => [...document.querySelectorAll("#list .route")].map((r) => { const x = window.PNW_ROUTES.find((y) => y.id === r.dataset.id); return x.gain / x.miles; }));
+  expect(ratios.length).toBeGreaterThan(1);
+  expect(ratios).toEqual([...ratios].sort((a, b) => b - a));
+  await page.reload();
+  await expect(page.locator("#sort")).toHaveValue("steep");
+});
+
 test("Name (A–Z) sorts by route name and persists", async ({ page }) => {
   await page.goto(`${PAGE}?month=any`);
   await openList(page);
