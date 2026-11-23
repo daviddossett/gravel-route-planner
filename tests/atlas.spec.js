@@ -381,6 +381,19 @@ test("Longest distance and Most climbing sort descending", async ({ page }) => {
   }
 });
 
+test("Steepest per mile sort shows the climbing rate on rows and follows Units", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  await openList(page);
+  const nums = page.locator("#list .route .nums").first();
+  await expect(nums).not.toContainText("/mi");
+  await page.locator("#sort").selectOption("steep");
+  await expect(nums).toContainText(/~\d+ ft\/mi/);
+  await page.locator("#units").selectOption("metric");
+  await expect(nums).toContainText(/~\d+ m\/km/);
+  await page.locator("#sort").selectOption("drive");
+  await expect(page.locator("#list .route .nums").first()).not.toContainText(/\/km|\/mi/);
+});
+
 test("on phones the route list is a toggleable overlay over a full-height map", async ({ page }) => {
   test.skip(!(page.viewportSize() && page.viewportSize().width <= 760), "phone layout only");
   await page.goto(PAGE);
@@ -570,6 +583,23 @@ test("units toggle shows km and m in filters, list and drawer, and leaves the UR
   await page.reload();
   await expect(page.locator("#units")).toHaveValue("metric");
   await expect(page.locator("#dist-out")).toContainText("km");
+});
+
+test("map scale bar follows the Units setting", async ({ page }) => {
+  await page.goto(`${PAGE}?month=any`);
+  const scale = page.locator(".leaflet-control-scale-line");
+  await expect(scale).toHaveCount(1);
+  await expect(scale.first()).toHaveText(/\d+ (mi|ft)$/);
+  await openList(page);
+  await page.locator("#units").selectOption("metric");
+  await expect(scale.first()).toHaveText(/\d+ (km|m)$/);
+  await page.locator("#units").selectOption("imperial");
+  await expect(scale.first()).toHaveText(/\d+ (mi|ft)$/);
+
+  const a = await scale.first().boundingBox();
+  const b = await page.locator(".leaflet-control-attribution").boundingBox();
+  const apart = a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+  expect(apart).toBe(true);
 });
 
 test("drive origin changes the listed drive times and is remembered", async ({ page }) => {
@@ -1794,4 +1824,19 @@ test("State and Route type options show counts that follow the other filters", a
   expect(await num(all)).toBe(before); // state counts ignore the state filter itself
   await expect(page.locator('#type option[value="all"]')).toHaveText(`Any (${await num(wa)})`);
   await expect(page.locator("#type")).toHaveValue("all");
+});
+
+test("forced-colors mode keeps the selected row and pressed toggles visibly marked", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#list .route").first()).toBeAttached();
+
+  const widths = (sel) => page.locator(sel).first().evaluate((el) => {
+    const s = getComputedStyle(el);
+    return { border: parseFloat(s.borderTopWidth) || 0, outline: s.outlineStyle === "none" ? 0 : parseFloat(s.outlineWidth) || 0 };
+  });
+  const row = await widths('#list .route[aria-selected="true"]');
+  expect(row.border + row.outline).toBeGreaterThan(0);
+  const toggle = await widths('[aria-pressed="true"]');
+  expect(toggle.border + toggle.outline).toBeGreaterThan(0);
 });
