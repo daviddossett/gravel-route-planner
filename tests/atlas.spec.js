@@ -1154,3 +1154,24 @@ test("page title follows the selected route and resets when the drawer closes", 
   expect(second).not.toBe(first);
   await expect(page).toHaveTitle(`${second} · Gravel Atlas`);
 });
+
+test("mobile Routes toggle shows the active filter count and clears on reset", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(PAGE);
+  const label = page.locator("#panel-toggle-label");
+  await expect(label).toHaveText("Routes");
+
+  await page.goto(`${PAGE}?state=WA`);
+  await expect(label).toHaveText("Routes · 1 filter");
+
+  await page.goto(`${PAGE}?state=WA&water=1`);
+  await expect(label).toHaveText("Routes · 2 filters");
+  await expect(page.locator("#panel-toggle")).toHaveAccessibleName("Routes · 2 filters");
+
+  await page.locator("#panel-toggle").click();
+  await expect(label).toHaveText("Show map");
+  await page.locator("#months button[aria-label=January]").click();
+  await page.locator("#reset").click();
+  await page.locator("#panel-toggle").click();
+  await expect(label).toHaveText("Routes");
+});
