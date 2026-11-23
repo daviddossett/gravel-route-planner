@@ -628,6 +628,7 @@
         <option value="fun">Chillest first</option>
         <option value="fun-desc">Spiciest first</option>
         <option value="gravel">Most gravel</option>
+        <option value="season">Season ending soonest</option>
         <option value="name">Name (A–Z)</option>
       </select></label>
       <button id="reset">Reset filters</button>
@@ -764,6 +765,11 @@ addEventListener("DOMContentLoaded", () => {
     gravel: (a, b) => b.gravel - a.gravel || driveFrom(a).h - driveFrom(b).h,
     "fun-desc": (a, b) => b.difficulty - a.difficulty || driveFrom(a).h - driveFrom(b).h,
     name: (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+    season: (a, b) => {
+      const key = (r) => { const s = seasonStatus(r.months); return s.on ? [0, s.all ? 13 : s.left] : [1, s.wait]; };
+      const ka = key(a), kb = key(b);
+      return ka[0] - kb[0] || ka[1] - kb[1] || SORTS.name(a, b);
+    },
   };
   let sortKey = "drive";
   $("#sort").addEventListener("change", (e) => { sortKey = e.target.value; render(); });
@@ -1547,16 +1553,21 @@ addEventListener("DOMContentLoaded", () => {
     return seasonRuns(ms, names, (a, b) => `${a}–${b}`);
   }
   // Season status for today's month (not the filter month); month lists wrap Dec→Jan.
-  function seasonNow(ms) {
+  function seasonStatus(ms) {
     const m = new Date().getMonth() + 1, has = (n) => ms.includes(((n - 1) % 12) + 1);
     if (has(m)) {
       let end = m;
       while (end < m + 12 && has(end + 1)) end++;
-      return end >= m + 11 ? "In season now (all year)" : `In season now (through ${MONTH_NAMES[(end - 1) % 12]})`;
+      return { on: true, all: end >= m + 11, end, left: end - m + 1 };
     }
     let next = m + 1;
     while (!has(next)) next++;
-    return `Out of season \u2014 next window starts ${MONTH_NAMES[(next - 1) % 12]}`;
+    return { on: false, next, wait: next - m };
+  }
+  function seasonNow(ms) {
+    const s = seasonStatus(ms);
+    if (s.on) return s.all ? "In season now (all year)" : `In season now (through ${MONTH_NAMES[(s.end - 1) % 12]})`;
+    return `Out of season \u2014 next window starts ${MONTH_NAMES[(s.next - 1) % 12]}`;
   }
   function seasonStrip(ms) {
     const label = `In season: ${seasonRuns(ms, MONTH_NAMES, (a, b) => `${a} to ${b}`)}`;
