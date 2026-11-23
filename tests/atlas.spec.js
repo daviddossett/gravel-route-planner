@@ -1221,3 +1221,21 @@ test("mobile Routes toggle shows the active filter count and clears on reset", a
   await page.locator("#panel-toggle").click();
   await expect(label).toHaveText("Routes");
 });
+
+test("drawer lists up to 3 similar rides and opens one, even if filtered out", async ({ page }) => {
+  await page.goto(`${PAGE}?demo&route=gales-creek`);
+  const items = page.locator("#drawer #similar-list .similar-btn");
+  const n = await items.count();
+  expect(n).toBeGreaterThan(0);
+  expect(n).toBeLessThanOrEqual(3);
+  await expect(page.locator("#drawer").getByRole("heading", { name: "Similar rides" })).toBeVisible();
+  await expect(page.locator("#drawer #similar-list")).not.toContainText("Gales Creek");
+  const name = (await items.first().locator(".similar-name").textContent()).trim();
+  await page.locator("#q").evaluate((el) => { el.value = "Gales Creek"; el.dispatchEvent(new Event("input", { bubbles: true })); });
+  await expect(page.locator(".route")).toHaveCount(1);
+  await items.first().click();
+  await expect(page.locator("#drawer-title")).toHaveText(name);
+  await expect(page.locator("#drawer-title")).toBeFocused();
+  expect(page.url()).not.toContain("route=gales-creek");
+  expect(page.url()).toContain("route=");
+});
