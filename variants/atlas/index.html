@@ -397,6 +397,9 @@
 
   .leaflet-container { font-family: var(--sans); }
   .start-pin { width: 12px; height: 12px; border-radius: 50%; background: var(--paper); border: 3px solid var(--ink); }
+  .start-pin.saved { background: var(--forest); border-color: var(--forest); }
+  .start-pin.ridden { background: var(--line); border-color: var(--ink-2); opacity: .8; }
+  .start-pin.ridden.saved { background: var(--forest); border-color: var(--ink-2); opacity: 1; }
   .start-pin.on { border-color: var(--rust); animation: hop .7s cubic-bezier(.3, 1.6, .5, 1); }
   @keyframes hop { 0% { transform: translateY(0); } 40% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
   .ants { animation: march 1s linear infinite; }
@@ -899,7 +902,11 @@ addEventListener("DOMContentLoaded", () => {
       l.ants.setStyle({ color: colors.ants, opacity: r.id === selected ? 1 : 0 });
       if (on) { l.casing.bringToFront(); l.line.bringToFront(); l.ants.bringToFront(); }
       const pinEl = l.pin.getElement && l.pin.getElement();
-      if (pinEl) pinEl.firstChild.classList.toggle("on", on);
+      if (pinEl) {
+        pinEl.firstChild.classList.toggle("on", on);
+        pinEl.firstChild.classList.toggle("saved", saved.has(r.id));
+        pinEl.firstChild.classList.toggle("ridden", ridden.has(r.id));
+      }
     });
   }
   function hover(id, on) { styleLines(on ? id : null); }

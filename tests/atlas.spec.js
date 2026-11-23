@@ -59,6 +59,20 @@ test.beforeEach(async ({ page }) => {
   await page.clock.install({ time: FIXED_DATE });
 });
 
+test("saving and marking a route ridden restyles its map pin", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#save")).toBeVisible();
+  const pin = page.locator(".start-pin.on");
+  await expect(pin).toHaveCount(1);
+  await expect(pin).not.toHaveClass(/saved/);
+  await page.locator("#save").click();
+  await expect(pin).toHaveClass(/saved/);
+  await page.locator("#ridden").click();
+  await expect(pin).toHaveClass(/ridden/);
+  await page.locator("#save").click();
+  await expect(pin).not.toHaveClass(/saved/);
+});
+
 test("demo loads with routes, a visible drawer, and Esc closes it", async ({ page }) => {
   const errors = watchErrors(page);
   await page.goto(`${PAGE}?demo`);
