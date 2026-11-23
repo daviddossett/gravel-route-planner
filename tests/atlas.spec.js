@@ -149,6 +149,16 @@ test("demo loads with routes, a visible drawer, and Esc closes it", async ({ pag
   expect(errors, "page and console errors").toEqual([]);
 });
 
+test("drawer says in plain text whether the route is in season today", async ({ page }) => {
+  await page.goto(`${PAGE}?demo&route=gales-creek`);
+  await expect(page.locator("#drawer #season-now")).toHaveText("In season now (through November)");
+  await page.goto(`${PAGE}?demo&route=fort-rock`);
+  await expect(page.locator("#drawer #season-now")).toHaveText("Out of season \u2014 next window starts September");
+  await page.clock.setSystemTime(new Date("2026-12-15T12:00:00"));
+  await page.goto(`${PAGE}?demo&route=gales-creek`);
+  await expect(page.locator("#drawer #season-now")).toHaveText("Out of season \u2014 next window starts April");
+});
+
 test("drawer season strip fills one cell per season month and outlines the filter month", async ({ page }) => {
   await page.goto(`${PAGE}?demo&month=7`);
   const strip = page.locator("#drawer .season-strip");
