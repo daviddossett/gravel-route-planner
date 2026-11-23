@@ -1164,6 +1164,30 @@ test("No pass needed shows only pass-free routes, round-trips through the URL an
   expect(page.url()).not.toContain("nopass=");
 });
 
+test("Route rows flag routes that need a pass and leave pass-free routes untagged", async ({ page }) => {
+  await page.goto(PAGE + "?month=any");
+  await openList(page);
+  const rows = page.locator("#list .route");
+  await expect(rows.first()).toBeVisible();
+  const { total, passCount, free } = await page.evaluate(() => ({
+    total: window.PNW_ROUTES.length,
+    passCount: window.PNW_ROUTES.filter((r) => r.pass).length,
+    free: window.PNW_ROUTES.filter((r) => !r.pass).length,
+  }));
+  expect(passCount).toBeGreaterThan(0);
+  expect(free).toBeGreaterThan(0);
+  await expect(rows).toHaveCount(total);
+  const tags = page.locator("#list .route .pass-tag");
+  await expect(tags).toHaveCount(passCount);
+  await expect(tags.first()).toContainText("Pass needed");
+  await expect(tags.first().locator("[aria-hidden='true']")).toHaveText("🎫");
+  await expect(tags.first()).toHaveAttribute("title", /Pass needed: \S+/);
+
+  await page.locator("#nopass-toggle").click();
+  await expect(rows).toHaveCount(free);
+  await expect(tags).toHaveCount(0);
+});
+
 test("Saved and Not ridden yet toggles persist in the URL and restore on load", async ({ page }) => {
   await page.goto(`${PAGE}?demo`);
   await page.locator("#save").click();
