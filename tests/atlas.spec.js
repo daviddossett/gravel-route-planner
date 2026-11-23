@@ -1338,3 +1338,17 @@ test("Esc in the shortcuts dialog does not also close the route drawer", async (
   await expect(page.locator("#help")).toBeHidden();
   await expect(page.locator("#drawer")).toHaveClass(/open/);
 });
+
+test("the Keyboard shortcuts header button is fully visible inside the viewport", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await openList(page);
+  const btn = page.locator("#help-open");
+  await expect(btn).toBeVisible();
+  const box = await btn.boundingBox();
+  const vp = page.viewportSize();
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(vp.width);
+  expect(box.height).toBeLessThan(40);
+  await btn.click();
+  await expect(page.locator("#help")).toBeVisible();
+});

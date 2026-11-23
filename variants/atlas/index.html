@@ -479,7 +479,7 @@
     .drawer:not(.open) { display: none; }
     .drawer .close, .drawer .actions, .drawer .route-nav, .drawer .copy-coords { display: none !important; }
   }
-  .help-link { margin-left: auto; font: inherit; font-size: 12px; padding: 6px 8px; color: var(--ink-2); background: none; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+  .help-link { grid-column: 1 / -1; justify-self: start; margin-top: 8px; white-space: nowrap; font: inherit; font-size: 12px; padding: 6px 8px; color: var(--ink-2); background: none; border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
   .help-link:hover { color: var(--ink); }
   .help-overlay { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgb(var(--shadow) / .55); }
   .help-overlay[hidden] { display: none; }
@@ -525,8 +525,8 @@
           <option value="imperial">Miles / feet</option>
           <option value="metric">Kilometers / meters</option>
         </select>
-        <button class="help-link" id="help-open" type="button" aria-haspopup="dialog" aria-keyshortcuts="?">Keyboard shortcuts</button>
       </div>
+      <button class="help-link" id="help-open" type="button" aria-haspopup="dialog" aria-keyshortcuts="?">Keyboard shortcuts</button>
     </header>
 
     <section class="filters" aria-label="Filters">
