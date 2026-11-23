@@ -1832,3 +1832,31 @@ test("forced-colors mode keeps the selected row and pressed toggles visibly mark
   const toggle = await widths('[aria-pressed="true"]');
   expect(toggle.border + toggle.outline).toBeGreaterThan(0);
 });
+
+test("Season ending soonest sorts in-season routes by months left, then by months until they open", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2026-10-15T12:00:00"));
+  await page.goto(`${PAGE}?month=any&sort=season`);
+  await expect(page.locator("#sort")).toHaveValue("season");
+  await openList(page);
+  await expect(page.locator("#list .route").first()).toBeVisible();
+  const { ids, expected } = await page.evaluate(() => {
+    const m = 10;
+    const rank = (r) => {
+      const has = (n) => r.months.includes(((n - 1) % 12) + 1);
+      if (has(m)) { let e = m; while (e < m + 12 && has(e + 1)) e++; return [0, e - m + 1]; }
+      let n = m + 1;
+      while (!has(n)) n++;
+      return [1, n - m];
+    };
+    const ids = [...document.querySelectorAll("#list .route")].map((r) => r.dataset.id);
+    const ranks = ids.map((id) => rank(window.PNW_ROUTES.find((x) => x.id === id)));
+    const sorted = [...ranks].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    return { ids, expected: [ranks, sorted] };
+  });
+  expect(ids.length).toBeGreaterThan(1);
+  expect(expected[0]).toEqual(expected[1]);
+  expect(expected[0][0][0]).toBe(0);
+  expect(expected[0][0][1]).toBe(1);
+  await page.locator("#sort").selectOption("drive");
+  await expect.poll(() => new URL(page.url()).searchParams.has("sort")).toBe(false);
+});
