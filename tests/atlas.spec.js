@@ -1715,3 +1715,20 @@ test("x picks a random route like Surprise me, and is ignored while typing or wi
   await expect(page.locator("#drawer")).not.toHaveAttribute("inert", "");
   await expect(page.locator("#help")).toContainText("Pick a random route");
 });
+
+test("State and Route type options show counts that follow the other filters", async ({ page }) => {
+  await page.clock.setFixedTime(FIXED_DATE);
+  await page.goto(`${PAGE}?demo`);
+  await openList(page);
+  const num = async (loc) => +(/\((\d+)\)/.exec((await loc.textContent()) || "") || [])[1];
+  const all = page.locator('#state button[data-v="all"]');
+  const or = page.locator('#state button[data-v="OR"]'), wa = page.locator('#state button[data-v="WA"]');
+  await expect(all).toHaveText(/^Both \(\d+\)$/);
+  expect(await num(all)).toBe((await num(or)) + (await num(wa)));
+  await expect(page.locator('#type option[value="loop"]')).toHaveText(/^Loop \(\d+\)$/);
+  const before = await num(all);
+  await page.locator('#state button[data-v="WA"]').click();
+  expect(await num(all)).toBe(before); // state counts ignore the state filter itself
+  await expect(page.locator('#type option[value="all"]')).toHaveText(`Any (${await num(wa)})`);
+  await expect(page.locator("#type")).toHaveValue("all");
+});
