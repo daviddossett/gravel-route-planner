@@ -348,6 +348,9 @@
   .ride-time .seg { margin: 6px 0; max-width: 320px; }
   .ride-time .est { margin: 0; line-height: 1.4; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .similar ul { list-style: none; margin: 4px 0 8px; padding: 0; }
+  .similar-btn { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 6px 8px; min-height: 32px; width: 100%; text-align: left; cursor: pointer; margin-bottom: 4px; }
+  .similar-btn:hover { border-color: var(--ink-2); }
   .compare label { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 13px; }
   .compare select { font: 500 13px var(--sans); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; min-height: 28px; min-width: 0; max-width: 100%; }
   .compare table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
@@ -1078,6 +1081,13 @@ addEventListener("DOMContentLoaded", () => {
     const h = r.miles / (p.mph * (1 - 0.15 * r.gravel / 100)) + r.gain / p.ftPerHr;
     return Math.round(h * 4) / 4;
   };
+  // Similar rides: up to 3 other routes, ranked by same region first, then same type, then closest miles; ties break by name.
+  function similarRoutes(r) {
+    return ROUTES.filter((x) => x.id !== r.id)
+      .sort((a, b) => (b.region === r.region) - (a.region === r.region) || (b.type === r.type) - (a.type === r.type) || Math.abs(a.miles - r.miles) - Math.abs(b.miles - r.miles) || a.name.localeCompare(b.name))
+      .slice(0, 3);
+  }
+  const similarItemsHTML = (r) => similarRoutes(r).map((x) => `<li><button type="button" class="similar-btn" data-id="${x.id}"><span class="similar-name">${x.name}</span> <span class="est">${distV(x.miles)} ${distU()} · ${FUN[x.difficulty]}</span></button></li>`).join("");
   // Refresh unit-dependent text in the open drawer without rebuilding it (keeps compare, plan and focus).
   function refreshDrawerUnits() {
     const r = ROUTES.find((x) => x.id === selected), d = $("#drawer");
@@ -1089,6 +1099,8 @@ addEventListener("DOMContentLoaded", () => {
     d.querySelector("#climb-feel").innerHTML = climbFeelText(r);
     d.querySelector("#profile-svg").innerHTML = profileSVG(r);
     d.querySelector("#profile-readout").textContent = "";
+    const sim = d.querySelector("#similar-list");
+    if (sim) sim.innerHTML = similarItemsHTML(r);
     const out = d.querySelector("#compare-out"), other = ROUTES.find((x) => x.id === d.querySelector("#compare-with").value);
     if (other) out.innerHTML = compareHTML(r, other);
   }
@@ -1219,6 +1231,7 @@ addEventListener("DOMContentLoaded", () => {
         <div>
           <h3>Why go</h3><ul>${r.highlights.map((h) => `<li>${h}</li>`).join("")}</ul>
           <h3>Watch for</h3><ul>${r.cautions.map((h) => `<li>${h}</li>`).join("")}</ul>
+          ${similarRoutes(r).length ? `<div class="similar"><h3>Similar rides</h3><ul id="similar-list">${similarItemsHTML(r)}</ul></div>` : ""}
           <div class="compare">
             <h3>Compare</h3>
             <label>Compare with <select id="compare-with"><option value="">Pick a route</option>${ROUTES.filter((x) => x.id !== r.id).map((x) => `<option value="${x.id}">${x.name}</option>`).join("")}</select></label>
@@ -1249,6 +1262,11 @@ addEventListener("DOMContentLoaded", () => {
       try { myTire ? localStorage.setItem(TIRE_KEY, myTire) : localStorage.removeItem(TIRE_KEY); } catch {}
       d.querySelector("#tire-fit").textContent = tireFitText(r);
       render();
+    };
+    const simList = d.querySelector("#similar-list");
+    if (simList) simList.onclick = (e) => {
+      const b = e.target.closest(".similar-btn"); if (b) revealRoute(b.dataset.id);
+      if (b) select(b.dataset.id, true, true);
     };
     d.querySelector("#compare-with").onchange = (e) => {
       const other = ROUTES.find((x) => x.id === e.target.value);
@@ -1482,15 +1500,19 @@ addEventListener("DOMContentLoaded", () => {
     setTimeout(() => { select(pick.id, true, true); toast(`The compass says: ${pick.name}`); }, wait);
   });
 
+  // Loosen filters when the route isn't in the current results so it still shows in the list.
+  function revealRoute(id) {
+    if (ROUTES.filter(matches).some((r) => r.id === id)) return;
+    Object.assign(f, defaults, { month: 0, origin: f.origin });
+    $("#q").value = "";
+    render();
+    toast("Filters loosened to show the linked route");
+  }
+
   const linked = readUrl();
   render();
   if (linked) {
-    if (!ROUTES.filter(matches).some((r) => r.id === linked)) {
-      Object.assign(f, defaults, { month: 0, origin: f.origin });
-      $("#q").value = "";
-      render();
-      toast("Filters loosened to show the linked route");
-    }
+    revealRoute(linked);
     select(linked, true);
   }
   const first = ROUTES.filter(matches)[0];
