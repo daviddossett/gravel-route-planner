@@ -1692,6 +1692,7 @@ test("in a month with no routes the month filter falls back to Any month, unless
   await expect(page.locator("#month-out")).toHaveText("Any month");
   await expect(page.locator("#toast")).not.toHaveClass(/show/);
   expect(errors).toEqual([]);
+});
 
 test("x picks a random route like Surprise me, and is ignored while typing or with modifiers", async ({ page }) => {
   await page.goto(PAGE);
