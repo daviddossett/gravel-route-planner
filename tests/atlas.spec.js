@@ -876,6 +876,33 @@ test("marking a route as ridden tags it, persists, and Not ridden yet hides it",
   expect(await rows.count()).toBeGreaterThan(total - 1);
 });
 
+test("badges earned tally follows Ridden marks, ignores filters, and expands", async ({ page }) => {
+  await page.goto(`${PAGE}?demo`);
+  await expect(page.locator("#list .route").first()).toBeAttached();
+  const tally = page.locator("#badges-toggle");
+  await expect(tally).toBeHidden();
+
+  await page.locator("#ridden").click();
+  const badge = (await page.locator("#drawer .sticker b").textContent()).trim();
+  await page.keyboard.press("Escape"); // close the route drawer
+  await openList(page);
+  await expect(tally).toBeVisible();
+  await expect(tally).toHaveText(/^Badges earned: 1 of \d+$/);
+  await expect(tally).toHaveAttribute("aria-expanded", "false");
+  await tally.click();
+  await expect(tally).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#badges-list li")).toHaveCount(1);
+  await expect(page.locator("#badges-list li")).toContainText(badge);
+  await expect(page.locator("#badges-list li")).toContainText(/\(.+\)$/);
+
+  await page.reload();
+  await page.locator("#ridden").click();
+  await page.keyboard.press("Escape");
+  await openList(page);
+  await expect(tally).toBeHidden();
+  await expect(page.locator("#badges-list")).toBeHidden();
+});
+
 test("empty state offers one-step loosening with counts and applies it", async ({ page }) => {
   await page.goto(PAGE);
   await openList(page);
