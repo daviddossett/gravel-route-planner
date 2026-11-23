@@ -400,7 +400,8 @@
   .start-pin.saved { background: var(--forest); border-color: var(--forest); }
   .start-pin.ridden { background: var(--line); border-color: var(--ink-2); opacity: .8; }
   .start-pin.ridden.saved { background: var(--forest); border-color: var(--ink-2); opacity: 1; }
-  .start-pin.on { border-color: var(--rust); animation: hop .7s cubic-bezier(.3, 1.6, .5, 1); }
+  .start-pin.on, .start-pin.on.ridden.saved { border-color: var(--rust); }
+  .start-pin.on { animation: hop .7s cubic-bezier(.3, 1.6, .5, 1); }
   @keyframes hop { 0% { transform: translateY(0); } 40% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
   .ants { animation: march 1s linear infinite; }
   @keyframes march { to { stroke-dashoffset: -12; } }

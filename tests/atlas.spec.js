@@ -69,6 +69,15 @@ test("saving and marking a route ridden restyles its map pin", async ({ page }) 
   await expect(pin).toHaveClass(/saved/);
   await page.locator("#ridden").click();
   await expect(pin).toHaveClass(/ridden/);
+  const rust = await page.evaluate(() => {
+    const t = document.createElement("i");
+    t.style.color = "var(--rust)";
+    document.body.append(t);
+    const c = getComputedStyle(t).color;
+    t.remove();
+    return c;
+  });
+  await expect(pin).toHaveCSS("border-top-color", rust);
   await page.locator("#save").click();
   await expect(pin).not.toHaveClass(/saved/);
 });
