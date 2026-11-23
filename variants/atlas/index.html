@@ -278,6 +278,10 @@
   .list-head .sort { display: flex; align-items: center; gap: 6px; margin-left: auto; margin-right: 14px; }
   .list-head .saved-toggle { white-space: nowrap; margin-right: 10px; order: 1; text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; min-height: 28px; color: var(--ink); }
   .list-head .saved-toggle[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 22px; border-bottom: 1px solid var(--line); }
+  .chips[hidden] { display: none; }
+  .chips button { font: 500 13px var(--sans); background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; min-height: 28px; cursor: pointer; max-width: 100%; overflow-wrap: anywhere; text-align: left; }
+  .chips button:hover { border-color: var(--ink); }
   .badges { padding: 8px 22px; font-size: 13px; color: var(--ink-2); border-bottom: 1px solid var(--line); }
   .badges button { font: 500 13px var(--sans); background: none; border: 0; padding: 4px 0; min-height: 28px; color: var(--forest); cursor: pointer; text-align: left; }
   .badges ul { margin: 4px 0 0; padding-left: 18px; overflow-wrap: anywhere; }
@@ -606,6 +610,7 @@
         <button type="button" id="export-marks">Export</button>
         <button type="button" id="import-marks">Import</button>
         <input type="file" id="import-file" accept=".json,application/json" hidden></span></div>
+    <div class="chips" id="chips" role="group" aria-label="Active filters" hidden></div>
     <div class="badges" id="badges" hidden>
       <button type="button" id="badges-toggle" aria-expanded="false" aria-controls="badges-list"></button>
       <ul id="badges-list" hidden></ul>
@@ -836,6 +841,46 @@ addEventListener("DOMContentLoaded", () => {
     ["Any water situation", () => f.water, () => { f.water = false; }],
     ["Allow routes that need a pass", () => f.nopass, () => { f.nopass = false; }],
   ];
+  // One removable chip per active filter: [text, active?, reset]. Sort and origin are not filters.
+  const CHIPS = [
+    () => [`Month: ${f.month ? MONTH_NAMES[f.month - 1].slice(0, 3) : ""}`, f.month && f.month !== defaults.month, () => { f.month = 0; }],
+    () => [`State: ${f.state === "OR" ? "Oregon" : "Washington"}`, f.state !== "all", () => { f.state = "all"; }],
+    () => [`Max distance: ${distV(f.dist)} ${distU()}`, f.dist !== defaults.dist, () => { f.dist = defaults.dist; }],
+    () => [`Max climbing: ${elevV(f.gain)} ${elevU()}`, f.gain !== defaults.gain, () => { f.gain = defaults.gain; }],
+    () => [`Min gravel: ${f.grav}%`, f.grav !== defaults.grav, () => { f.grav = defaults.grav; }],
+    () => [`Drive time: ≤ ${f.drive} h`, f.drive !== defaults.drive, () => { f.drive = defaults.drive; }],
+    () => [`Max fun: ${FUN[f.fun]}`, f.fun !== defaults.fun, () => { f.fun = defaults.fun; }],
+    () => [`Type: ${TYPE[f.type]}`, f.type !== "all", () => { f.type = "all"; }],
+    () => [`Region: ${f.region}`, f.region !== "all", () => { f.region = "all"; }],
+    () => [`Search: ${f.q.trim()}`, f.q.trim(), () => { f.q = ""; }],
+    () => ["Has water", f.water, () => { f.water = false; }],
+    () => ["No pass needed", f.nopass, () => { f.nopass = false; }],
+    () => ["Saved", savedOnly, () => { savedOnly = false; }],
+    () => ["Not ridden yet", hideRidden, () => { hideRidden = false; }],
+    () => [myTire ? `Fits my ${myTire} mm tires` : "Fits my tires", fitTires, () => { fitTires = false; }],
+  ];
+  const chipsEl = $("#chips");
+  function renderChips() {
+    const chips = CHIPS.map((c, i) => [...c(), i]).filter(([, on]) => on);
+    chipsEl.hidden = !chips.length;
+    chipsEl.replaceChildren(...chips.map(([text, , , i]) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.dataset.i = i;
+      b.setAttribute("aria-label", `Remove filter: ${text.replace(": ", " ")}`);
+      b.append(`${text} `);
+      const x = document.createElement("span"); x.setAttribute("aria-hidden", "true"); x.textContent = "×";
+      b.append(x);
+      return b;
+    }));
+  }
+  chipsEl.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-i]"); if (!b) return;
+    const pos = [...chipsEl.children].indexOf(b);
+    CHIPS[+b.dataset.i]()[2]();
+    render();
+    const next = chipsEl.children[Math.min(pos, chipsEl.children.length - 1)] || $("#list .route[tabindex='0']");
+    if (next) next.focus({ preventScroll: true });
+  });
   function looseningHints() {
     const snap = () => [{ ...f }, savedOnly, hideRidden, fitTires];
     const [f0, s0, h0, t0] = snap();
@@ -901,6 +946,7 @@ addEventListener("DOMContentLoaded", () => {
     $("#water-toggle").setAttribute("aria-pressed", f.water);
     $("#nopass-toggle").setAttribute("aria-pressed", f.nopass);
     updateToggleLabel();
+    renderChips();
     const shown = ROUTES.filter(matches).sort(SORTS[sortKey]);
     updateRouteNav();
     $("#count").textContent = `${shown.length} of ${ROUTES.length} routes`;
